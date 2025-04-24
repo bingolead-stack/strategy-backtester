@@ -1,0 +1,21 @@
+{
+  "name": "Strategy One",
+  "entry_offset": 8,
+  "stop_loss_offset": 200,
+  "trail_trigger": 1,
+  "re_entry_distance": 2,
+  "max_open_trades": 3,
+  "max_contracts_per_trade": 3,
+  "long_start": "2000-01-01",
+  "long_end": "2025-04-16",
+  "short_start": null,
+  "short_end": null,
+  "excluded_date_ranges": [
+    ["2007-07-20", "2009-04-29"],
+    ["2011-08-05", "2012-03-12"],
+    ["2014-10-10", "2016-07-11"],
+    ["2018-12-06", "2019-12-12"],
+    ["2020-02-27", "2020-05-20"],
+    ["2022-03-15", "2023-07-14"]
+  ]
+}
