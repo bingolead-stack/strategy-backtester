@@ -85,7 +85,6 @@ for i, combo in enumerate(combinations):
     backtester.load_backtest_data(data)
     backtester.run_backtest()
 
-    total_pnl = strategy.total_pnl
     strategy.print_trade_stats()
 
     results.append({
@@ -96,17 +95,16 @@ for i, combo in enumerate(combinations):
         'TRAIL_TRIGGER': TRAIL_TRIGGER,
         'RE_ENTRY_DISTANCE': RE_ENTRY_DISTANCE,
         'MAX_OPEN_TRADES': MAX_OPEN_TRADES,
-        'TOTAL_PNL': total_pnl,
-        'WIN_RATE': strategy.win_rate,
-        "AVG_WINNER": strategy.avg_winner
+        'TOTAL_PNL': strategy.total_pnl,
+        'WIN_RATE': strategy.winrate,
+        "AVERAGE_WINN": strategy.avgWinner,
+        "AVERAGE_LOSS": strategy.avgLoser,
+        "REWARD_RISK": strategy.avgWinner / strategy.avgLoser
     })
 
 # Convert to DataFrame for analysis
 results_df = pd.DataFrame(results)
-results_df.sort_values(by='TOTAL_PNL', ascending=False, inplace=True)
-
-print(results_df.head())  # top 5 performing parameter sets
-results_df.sort_values(by='WIN_RATE', ascending=False, inplace=True)
+results_df.sort_values(by='REWARD_RISK', ascending=False, inplace=True)
 print(results_df.head())  # top 5 performing parameter sets
 
 results_df.to_csv(output_file, index=False)

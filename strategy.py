@@ -45,7 +45,8 @@ class Strategy:
         self.total_pnl = 0
         self.cumulative_pnl = []
         self.winrate = 0
-        self.avgwinner = 0
+        self.avgWinner = 0
+        self.avgLoser = 0
 
         # current market state
         self.price = None
@@ -235,8 +236,9 @@ class Strategy:
         biggest_loser = min(losses, default=0)
         average_winner = sum(wins) / max(1, len(wins))
         average_loser = sum(losses) / max(1, len(losses))
-        self.avg_winner = average_winner
-        self.win_rate = win_percentage
+        self.avgWinner = average_winner
+        self.avgLoser = average_loser
+        self.winrate = win_percentage
 
         print(f"\n{self.name} | Trade Statistics:")
         print(f"Win %: {win_percentage:.2f}%, Lose %: {lose_percentage:.2f}%")
