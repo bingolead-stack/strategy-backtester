@@ -73,7 +73,7 @@ for i, combo in enumerate(combinations):
         re_entry_distance=RE_ENTRY_DISTANCE,
         max_open_trades=MAX_OPEN_TRADES,
         max_contracts_per_trade=LOTS_PER_TRADE,
-        long_dates=long_dates,
+        long_dates=long_dates_excluded,
         short_dates=short_dates
     )
 
