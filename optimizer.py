@@ -63,11 +63,12 @@ csv_file = "es-30m-cleaned.csv"
 data = pd.read_csv(csv_file, parse_dates=[0], index_col=0)
 
 for i, combo in enumerate(combinations):
-    LOTS_PER_TRADE, ENTRY_OFFSET, STOP_LOSS_OFFSET, TRAIL_TRIGGER, RE_ENTRY_DISTANCE, MAX_OPEN_TRADES = combo
+    LOTS_PER_TRADE, ENTRY_OFFSET, TAKE_PROFIT_OFFSET, STOP_LOSS_OFFSET, TRAIL_TRIGGER, RE_ENTRY_DISTANCE, MAX_OPEN_TRADES = combo
     
     strategy = Strategy(
         name=f"Combo {i}",
         entry_offset=ENTRY_OFFSET,
+        take_profit_offset=TAKE_PROFIT_OFFSET,
         stop_loss_offset=STOP_LOSS_OFFSET,
         trail_trigger=TRAIL_TRIGGER,
         re_entry_distance=RE_ENTRY_DISTANCE,
@@ -90,6 +91,7 @@ for i, combo in enumerate(combinations):
     results.append({
         'LOTS_PER_TRADE': LOTS_PER_TRADE,
         'ENTRY_OFFSET': ENTRY_OFFSET,
+        'TAKE_PROFIT_OFFSET': TAKE_PROFIT_OFFSET,
         'STOP_LOSS_OFFSET': STOP_LOSS_OFFSET,
         'TRAIL_TRIGGER': TRAIL_TRIGGER,
         'RE_ENTRY_DISTANCE': RE_ENTRY_DISTANCE,

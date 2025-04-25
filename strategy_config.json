@@ -1,6 +1,7 @@
 {
   "name": "Strategy One",
   "entry_offset": 8,
+  "take_profit_offset": 10,
   "stop_loss_offset": 200,
   "trail_trigger": 1,
   "re_entry_distance": 2,

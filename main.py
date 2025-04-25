@@ -57,6 +57,7 @@ with open("strategy_config.json", "r") as f:
     strategy = Strategy(
         name=strategy_config["name"],
         entry_offset=strategy_config["entry_offset"],
+        take_profit_offset=strategy_config["take_profit_offset"],
         stop_loss_offset=strategy_config["stop_loss_offset"],
         trail_trigger=strategy_config["trail_trigger"],
         re_entry_distance=strategy_config["re_entry_distance"],

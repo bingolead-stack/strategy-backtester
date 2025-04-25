@@ -6,10 +6,11 @@ from matplotlib import pyplot as plt
 
 class Strategy:
 
-    def __init__(self, name: str, entry_offset, stop_loss_offset, trail_trigger, re_entry_distance,
+    def __init__(self, name: str, entry_offset, take_profit_offset, stop_loss_offset, trail_trigger, re_entry_distance,
                  max_open_trades, max_contracts_per_trade, long_dates, short_dates):
         """
         :param entry_offset: offset above signal to enter trade
+        :param take_profit_offset: offset number of ticks above signal to close for profit
         :param stop_loss_offset: Offset, in ticks, that we stop ourselves out
         :param trail_trigger: Number of static levels before we trigger our trailing stop
         :param re_entry_distance: Distance beyond the retracement before we will re-enter our trade
@@ -22,7 +23,8 @@ class Strategy:
         self.name = name
         self.static_levels = None
         self.entry_offset = entry_offset
-        self.stop_loss_offset = stop_loss_offset / 4  # convert to ticks
+        self.take_profit_offset = take_profit_offset / 4 # convert to price
+        self.stop_loss_offset = stop_loss_offset / 4  # convert to price
         self.trail_trigger = trail_trigger
         self.re_entry_distance = re_entry_distance
         self.max_open_trades = max_open_trades
@@ -131,9 +133,11 @@ class Strategy:
                                  0))  # pnl for buy trade is $0 since we haven't locked in any pnl yet
 
                             self.traded_levels[level] = self.price
+                            
+                            take_profit_level = entry_price + self.take_profit_offset
+                            trade = [self.index, entry_price, stop_level, trailing_stop, level, take_profit_level]
 
-                            trade = [self.index, entry_price, stop_level, trailing_stop,
-                                     level]  # store our open trades
+                            # trade = [self.index, entry_price, stop_level, trailing_stop, level]  # store our open trades
                             self.open_trade_list.append(trade)
                             self.open_trade_count += 1
                             self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
@@ -149,7 +153,7 @@ class Strategy:
         if self.open_trade_count > 0:
             trades_to_remove = []
             for i in range(len(self.open_trade_list)):
-                trade_time, entry_price, stop_level, trailing_stop, traded_level = self.open_trade_list[i]
+                trade_time, entry_price, stop_level, trailing_stop, traded_level, take_profit_level  = self.open_trade_list[i]
                 if trailing_stop is None:
                     # Check if price has moved 2 levels above entry
                     index_of_level = self.static_levels.index(
@@ -173,7 +177,7 @@ class Strategy:
                     trailing_stop = max(trailing_stop, highest_static_level)  # use high
                     self.open_trade_list[i][3] = trailing_stop  # update trailing stop
 
-                if self.price <= stop_level or (trailing_stop is not None and self.price <= trailing_stop):
+                if self.price <= stop_level or (trailing_stop is not None and self.price <= trailing_stop) or (self.price >= take_profit_level):
                     # trade_history.append((index, 'SELL', price))
 
                     pnl = (self.price - entry_price) * 50  # mult be size
@@ -186,7 +190,7 @@ class Strategy:
 
                     # clean up open trades
                     self.open_trade_count -= 1
-                    trades_to_remove.append([trade_time, entry_price, stop_level, trailing_stop, traded_level])
+                    trades_to_remove.append([trade_time, entry_price, stop_level, trailing_stop, traded_level, take_profit_level])
 
                     print(
                         f"[{self.index}] SELL ORDER EXECUTED at {self.price} (stop level hit {stop_level} or trailing stop hit at {trailing_stop})\n"

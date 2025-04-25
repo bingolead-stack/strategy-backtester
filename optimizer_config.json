@@ -2,10 +2,11 @@
     "param_grid": {
       "LOTS_PER_TRADE": [3, 4],
       "ENTRY_OFFSET": [6, 8, 10],
+      "TAKE_PROFIT_OFFSET": [10, 12, 14],
       "STOP_LOSS_OFFSET": [100, 200],
       "TRAIL_TRIGGER": [1, 2],
       "RE_ENTRY_DISTANCE": [2, 3],
-      "MAX_OPEN_TRADES": [3, 6, 9, 12, 15]
+      "MAX_OPEN_TRADES": [3, 6, 9, 12]
     },
     "long_start": "2000-01-01",
     "long_end": "2025-04-16",
