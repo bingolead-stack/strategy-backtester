@@ -1,20 +1,18 @@
-from datetime import date
 from itertools import product
+import json
 
 from strategy import Strategy
 from strategy_backtester import StrategyBacktester
-import matplotlib.pyplot as plt
-from tabulate import tabulate 
 
-param_grid = {
-    'LOTS_PER_TRADE': [3, 4],
-    'ENTRY_OFFSET': [6, 8, 10],
-    'STOP_LOSS_OFFSET': [100, 200],  # in ticks
-    'TRAIL_TRIGGER': [1, 2],
-    'RE_ENTRY_DISTANCE': [2, 3],
-    'MAX_OPEN_TRADES': [3, 6, 9, 12, 15],
-}
 import pandas as pd
+import os
+
+# Delete previous optimizer result if it exists
+output_file = "optimizer_result.csv"
+if os.path.exists(output_file):
+    os.remove(output_file)
+    print(f"Deleted existing file: {output_file}")
+
 STATIC_LEVELS = [
     31, 89.5, 148, 206.5, 265, 323.5, 382, 440.5, 499, 557.5, 616, 674.5, 733,
     791.5, 850, 908.5, 967, 1025.5, 1084, 1142.5, 1201, 1259.5, 1318, 1376.5,
@@ -32,10 +30,35 @@ STATIC_LEVELS = [
     7870, 7928.5, 7987
 ]
 results = []
+# === Load Config ===
+with open("optimizer_config.json", "r") as f:
+    config = json.load(f)
+param_grid = config["param_grid"]
 
 combinations = list(product(*param_grid.values()))
-long_dates = pd.date_range(start=date(2000, 1, 1), end=date.today(), freq="30min")
-short_dates = []
+long_dates = pd.date_range(
+    start=pd.to_datetime(config["long_start"]),
+    end=pd.to_datetime(config["long_end"]),
+    freq="30min"
+) if config["long_start"] and config["long_end"] else []
+
+short_dates = pd.date_range(
+    start=pd.to_datetime(config["short_start"]),
+    end=pd.to_datetime(config["short_end"]),
+    freq="30min"
+) if config["short_start"] and config["short_end"] else []
+
+excluded_ranges = config.get("excluded_date_ranges", [])
+excluded_dates = pd.DatetimeIndex([])
+
+for start_str, end_str in excluded_ranges:
+    start = pd.to_datetime(start_str)
+    end = pd.to_datetime(end_str)
+    if start and end:
+        excluded_dates = excluded_dates.union(pd.date_range(start=start, end=end, freq="30min"))
+
+long_dates_excluded = long_dates.difference(excluded_dates)
+
 csv_file = "es-30m-cleaned.csv"
 data = pd.read_csv(csv_file, parse_dates=[0], index_col=0)
 
@@ -84,4 +107,4 @@ print(results_df.head())  # top 5 performing parameter sets
 results_df.sort_values(by='WIN_RATE', ascending=False, inplace=True)
 print(results_df.head())  # top 5 performing parameter sets
 
-results_df.to_csv('optimizer_result.csv', index=False)
+results_df.to_csv(output_file, index=False)
