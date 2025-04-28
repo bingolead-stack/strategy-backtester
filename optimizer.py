@@ -99,6 +99,7 @@ for i, combo in enumerate(combinations):
         'WIN_RATE': strategy.winrate,
         "AVERAGE_WINN": strategy.avgWinner,
         "AVERAGE_LOSS": strategy.avgLoser,
+        "TOTAL_TRADE_NUMBER": strategy.total_trade,
     })
 
 # Convert to DataFrame for analysis

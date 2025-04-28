@@ -47,6 +47,7 @@ class Strategy:
         self.winrate = 0
         self.avgWinner = 0
         self.avgLoser = 0
+        self.total_trade = 0
 
         # current market state
         self.price = None
@@ -140,6 +141,7 @@ class Strategy:
 
                             # trade = [self.index, entry_price, stop_level, trailing_stop, level]  # store our open trades
                             self.open_trade_list.append(trade)
+                            self.total_trade += 1
                             self.open_trade_count += 1
                             self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
 
