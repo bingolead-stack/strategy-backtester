@@ -63,7 +63,7 @@ csv_file = "es-30m-cleaned.csv"
 data = pd.read_csv(csv_file, parse_dates=[0], index_col=0)
 
 for i, combo in enumerate(combinations):
-    LOTS_PER_TRADE, ENTRY_OFFSET, TAKE_PROFIT_OFFSET, STOP_LOSS_OFFSET, TRAIL_TRIGGER, RE_ENTRY_DISTANCE, MAX_OPEN_TRADES = combo
+    MAX_CONTRACTS_PER_TRADE, ENTRY_OFFSET, TAKE_PROFIT_OFFSET, STOP_LOSS_OFFSET, TRAIL_TRIGGER, RE_ENTRY_DISTANCE, MAX_OPEN_TRADES = combo
     
     strategy = Strategy(
         name=f"Combo {i}",
@@ -73,7 +73,7 @@ for i, combo in enumerate(combinations):
         trail_trigger=TRAIL_TRIGGER,
         re_entry_distance=RE_ENTRY_DISTANCE,
         max_open_trades=MAX_OPEN_TRADES,
-        max_contracts_per_trade=LOTS_PER_TRADE,
+        max_contracts_per_trade=MAX_CONTRACTS_PER_TRADE,
         long_dates=long_dates_excluded,
         short_dates=short_dates
     )
@@ -88,13 +88,13 @@ for i, combo in enumerate(combinations):
     strategy.print_trade_stats()
 
     results.append({
-        'LOTS_PER_TRADE': LOTS_PER_TRADE,
         'ENTRY_OFFSET': ENTRY_OFFSET,
         'TAKE_PROFIT_OFFSET': TAKE_PROFIT_OFFSET,
         'STOP_LOSS_OFFSET': STOP_LOSS_OFFSET,
         'TRAIL_TRIGGER': TRAIL_TRIGGER,
         'RE_ENTRY_DISTANCE': RE_ENTRY_DISTANCE,
         'MAX_OPEN_TRADES': MAX_OPEN_TRADES,
+        'MAX_CONTRACTS_PER_TRADE': MAX_CONTRACTS_PER_TRADE,
         'TOTAL_PNL': strategy.total_pnl,
         'WIN_RATE': strategy.winrate,
         "AVERAGE_WINN": strategy.avgWinner,

@@ -1,6 +1,6 @@
 {
     "param_grid": {
-      "LOTS_PER_TRADE": [1],
+      "MAX_CONTRACTS_PER_TRADE": [1],
       "ENTRY_OFFSET": [10, 25, 50, 75, 100],
       "TAKE_PROFIT_OFFSET": [10, 25, 50, 75, 100, 200, 400, 800, 1600, 3200, 6400, 12800],
       "STOP_LOSS_OFFSET": [10, 25, 50, 75, 100, 125, 150, 175, 200],
