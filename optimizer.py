@@ -99,12 +99,11 @@ for i, combo in enumerate(combinations):
         'WIN_RATE': strategy.winrate,
         "AVERAGE_WINN": strategy.avgWinner,
         "AVERAGE_LOSS": strategy.avgLoser,
-        "REWARD_RISK": strategy.avgWinner / strategy.avgLoser
     })
 
 # Convert to DataFrame for analysis
 results_df = pd.DataFrame(results)
-results_df.sort_values(by='REWARD_RISK', ascending=False, inplace=True)
+results_df.sort_values(by='WIN_RATE', ascending=False, inplace=True)
 print(results_df.head())  # top 5 performing parameter sets
 
 results_df.to_csv(output_file, index=False)
