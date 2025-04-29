@@ -2,29 +2,49 @@ import pandas as pd
 import numpy as np
 
 # Load your CSV
-df = pd.read_csv('optimizer_result.csv') 
+df = pd.read_csv('optimizer_result_add_reward_to_risk.csv') 
 
-# Handle division by zero and calculate Reward-to-Risk ratio
-def compute_reward_to_risk(row):
-    if row['AVERAGE_LOSS'] == 0:
-        return 9999  # or np.inf if you prefer
+def target_function(win_rate, total_pnl, reward_to_risk, num_of_trade,
+                    w_win=0.5, w_pnl=0.2, w_rr=0.2, w_trades=0.1):
+    # Normalize
+    win_rate_norm = min(win_rate / 100, 1.0)
+    pnl_norm = min(total_pnl / 301475, 1.0)
+    rr_norm = min(reward_to_risk / 13.8, 1.0)
+    trades_norm = min(num_of_trade / 213, 1.0)
+
+    # Optional: apply penalty if too few trades
+    if num_of_trade < 30:
+        penalty = 0.5
     else:
-        return row['AVERAGE_WINN'] / row['AVERAGE_LOSS']
+        penalty = 1
 
-# Add a new column for Reward-to-Risk
-df['REWARD_TO_RISK'] = df.apply(compute_reward_to_risk, axis=1)
+    # Weighted sum with penalty
+    score = (w_win * win_rate_norm +
+             w_pnl * pnl_norm +
+             w_rr * rr_norm +
+             w_trades * trades_norm) * penalty
+
+    return score
 
 # Compute final score
-df['SCORE'] = df['REWARD_TO_RISK'] * np.log1p(df['TOTAL_PNL'])
+df["SCORE"] = df.apply(
+    lambda row: target_function(
+        row["WIN_RATE"],
+        row["TOTAL_PNL"],
+        row["REWARD_TO_RISK"],
+        row["NUM_OF_TRADE"]
+    ),
+    axis=1
+)
 
-# Sort by Score descending
+# # Sort by Score descending
 df_sorted = df.sort_values(by='SCORE', ascending=False)
 
 # Output to a new CSV
-df_sorted.to_csv('optimizer_sorted_result.csv', index=False)
+df_sorted.to_csv('optimizer_final_result.csv', index=False)
 
 # Find the best parameter set
-best_row = df_sorted.loc[df['SCORE'].idxmax()]
+best_row = df_sorted.loc[df_sorted['SCORE'].idxmax()]
 
 print("Best Parameter Set:")
 print(best_row)
