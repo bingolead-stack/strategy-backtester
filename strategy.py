@@ -48,6 +48,7 @@ class Strategy:
         self.avgWinner = 0
         self.avgLoser = 0
         self.total_trade = 0
+        self.reward_to_risk = 0
 
         # current market state
         self.price = None
@@ -141,7 +142,6 @@ class Strategy:
 
                             # trade = [self.index, entry_price, stop_level, trailing_stop, level]  # store our open trades
                             self.open_trade_list.append(trade)
-                            self.total_trade += 1
                             self.open_trade_count += 1
                             self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
 
@@ -241,6 +241,8 @@ class Strategy:
         self.avgWinner = average_winner
         self.avgLoser = average_loser
         self.winrate = win_percentage
+        self.total_trade = len(self.trade_history)
+        self.reward_to_risk = average_winner / max(1, average_loser)
 
         print(f"\n{self.name} | Trade Statistics:")
         print(f"Win %: {win_percentage:.2f}%, Lose %: {lose_percentage:.2f}%")
