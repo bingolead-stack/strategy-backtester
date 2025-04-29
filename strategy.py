@@ -242,7 +242,7 @@ class Strategy:
         self.avgLoser = average_loser
         self.winrate = win_percentage
         self.total_trade = len(self.trade_history)
-        self.reward_to_risk = average_winner / max(1, average_loser)
+        self.reward_to_risk = average_winner / max(1, abs(average_loser))
 
         print(f"\n{self.name} | Trade Statistics:")
         print(f"Win %: {win_percentage:.2f}%, Lose %: {lose_percentage:.2f}%")
