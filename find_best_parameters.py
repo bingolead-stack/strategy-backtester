@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 # Load your CSV
-df = pd.read_csv('optimizer_result_add_reward_to_risk.csv') 
+df = pd.read_csv('optimizer_result.csv') 
 
 def target_function(win_rate, total_pnl, reward_to_risk, num_of_trade,
                     w_win=0.5, w_pnl=0.2, w_rr=0.2, w_trades=0.1):
