@@ -32,80 +32,73 @@ STATIC_LEVELS = [
 results = []
 # === Load Config ===
 with open("optimizer_config.json", "r") as f:
-    config = json.load(f)
-param_grid = config["param_grid"]
+    optimizer_config = json.load(f)
+    param_grid = optimizer_config["param_grid"]
 
-combinations = list(product(*param_grid.values()))
-long_dates = pd.date_range(
-    start=pd.to_datetime(config["long_start"]),
-    end=pd.to_datetime(config["long_end"]),
-    freq="30min"
-) if config["long_start"] and config["long_end"] else []
+    combinations = list(product(*param_grid.values()))
 
-short_dates = pd.date_range(
-    start=pd.to_datetime(config["short_start"]),
-    end=pd.to_datetime(config["short_end"]),
-    freq="30min"
-) if config["short_start"] and config["short_end"] else []
+    # Build long_dates
+    long_date_ranges = optimizer_config.get("long_date_ranges", [])
+    long_dates = pd.DatetimeIndex([])
 
-excluded_ranges = config.get("excluded_date_ranges", [])
-excluded_dates = pd.DatetimeIndex([])
+    for start_str, end_str in long_date_ranges:
+        start = pd.to_datetime(start_str)
+        end = pd.to_datetime(end_str)
+        long_dates = long_dates.union(pd.date_range(start=start, end=end, freq="30min"))
 
-for start_str, end_str in excluded_ranges:
-    start = pd.to_datetime(start_str)
-    end = pd.to_datetime(end_str)
-    if start and end:
-        excluded_dates = excluded_dates.union(pd.date_range(start=start, end=end, freq="30min"))
+    short_date_ranges = optimizer_config.get("short_date_ranges", [])
+    short_dates = pd.DatetimeIndex([])
 
-long_dates_excluded = long_dates.difference(excluded_dates)
+    for start_str, end_str in short_date_ranges:
+        start = pd.to_datetime(start_str)
+        end = pd.to_datetime(end_str)
+        short_dates = short_dates.union(pd.date_range(start=start, end=end, freq="30min"))
 
-csv_file = "es-30m-cleaned.csv"
-data = pd.read_csv(csv_file, parse_dates=[0], index_col=0)
+    csv_file = "es-30m-cleaned.csv"
+    data = pd.read_csv(csv_file, parse_dates=[0], index_col=0)
 
-for i, combo in enumerate(combinations):
-    MAX_CONTRACTS_PER_TRADE, ENTRY_OFFSET, TAKE_PROFIT_OFFSET, STOP_LOSS_OFFSET, TRAIL_TRIGGER, RE_ENTRY_DISTANCE, MAX_OPEN_TRADES = combo
-    
-    strategy = Strategy(
-        name=f"Combo {i}",
-        entry_offset=ENTRY_OFFSET,
-        take_profit_offset=TAKE_PROFIT_OFFSET,
-        stop_loss_offset=STOP_LOSS_OFFSET,
-        trail_trigger=TRAIL_TRIGGER,
-        re_entry_distance=RE_ENTRY_DISTANCE,
-        max_open_trades=MAX_OPEN_TRADES,
-        max_contracts_per_trade=MAX_CONTRACTS_PER_TRADE,
-        long_dates=long_dates_excluded,
-        short_dates=short_dates
-    )
+    for i, combo in enumerate(combinations):
+        ENTRY_OFFSET, TAKE_PROFIT_OFFSET, STOP_LOSS_OFFSET, TRAIL_TRIGGER, RE_ENTRY_DISTANCE, MAX_OPEN_TRADES, MAX_CONTRACTS_PER_TRADE = combo
+        
+        strategy = Strategy(
+            name=f"Combo {i}",
+            entry_offset=ENTRY_OFFSET,
+            take_profit_offset=TAKE_PROFIT_OFFSET,
+            stop_loss_offset=STOP_LOSS_OFFSET,
+            trail_trigger=TRAIL_TRIGGER,
+            re_entry_distance=RE_ENTRY_DISTANCE,
+            max_open_trades=MAX_OPEN_TRADES,
+            max_contracts_per_trade=MAX_CONTRACTS_PER_TRADE,
+            long_dates=long_dates,
+            short_dates=short_dates
+        )
 
-    strategy.load_static_levels(STATIC_LEVELS)
-    
-    backtester = StrategyBacktester()
-    backtester.load_strategy(strategy)
-    backtester.load_backtest_data(data)
-    backtester.run_backtest()
+        strategy.load_static_levels(STATIC_LEVELS)
+        
+        backtester = StrategyBacktester()
+        backtester.load_strategy(strategy)
+        backtester.load_backtest_data(data)
+        backtester.run_backtest()
 
-    strategy.print_trade_stats()
+        strategy.print_trade_stats()
 
-    results.append({
-        'ENTRY_OFFSET': ENTRY_OFFSET,
-        'TAKE_PROFIT_OFFSET': TAKE_PROFIT_OFFSET,
-        'STOP_LOSS_OFFSET': STOP_LOSS_OFFSET,
-        'TRAIL_TRIGGER': TRAIL_TRIGGER,
-        'RE_ENTRY_DISTANCE': RE_ENTRY_DISTANCE,
-        'MAX_OPEN_TRADES': MAX_OPEN_TRADES,
-        'MAX_CONTRACTS_PER_TRADE': MAX_CONTRACTS_PER_TRADE,
-        'TOTAL_PNL': strategy.total_pnl,
-        'WIN_RATE': strategy.winrate,
-        "AVERAGE_WINN": strategy.avgWinner,
-        "AVERAGE_LOSS": strategy.avgLoser,
-        "TOTAL_TRADE_NUMBER": strategy.total_trade,
-        "REWARD_TO_RISK": strategy.reward_to_risk,
-    })
+        results.append({
+            'ENTRY_OFFSET': ENTRY_OFFSET,
+            'TAKE_PROFIT_OFFSET': TAKE_PROFIT_OFFSET,
+            'STOP_LOSS_OFFSET': STOP_LOSS_OFFSET,
+            'TRAIL_TRIGGER': TRAIL_TRIGGER,
+            'RE_ENTRY_DISTANCE': RE_ENTRY_DISTANCE,
+            'MAX_OPEN_TRADES': MAX_OPEN_TRADES,
+            'MAX_CONTRACTS_PER_TRADE': MAX_CONTRACTS_PER_TRADE,
+            'TOTAL_PNL': strategy.total_pnl,
+            'WIN_RATE': strategy.winrate,
+            "AVERAGE_WINN": strategy.avgWinner,
+            "AVERAGE_LOSS": strategy.avgLoser,
+            "NUM_OF_TRADE": strategy.total_trade,
+            "REWARD_TO_RISK": strategy.reward_to_risk,
+        })
 
-# Convert to DataFrame for analysis
-results_df = pd.DataFrame(results)
-results_df.sort_values(by='REWARD_TO_RISK', ascending=False, inplace=True)
-print(results_df.head())  # top 5 performing parameter sets
-
-results_df.to_csv(output_file, index=False)
+    # Convert to DataFrame for analysis
+    results_df = pd.DataFrame(results)
+    print("Optimization result is available now!")
+    results_df.to_csv(output_file, index=False)

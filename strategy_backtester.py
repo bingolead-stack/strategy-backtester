@@ -51,6 +51,7 @@ class StrategyBacktester:
         for index, row in self.data.iterrows():
             price = row['close']  # update current price
             high_price = row['high']
+            low_price = row['low']
             
 
             if last_price is None:  # cant trade without a valid last price
@@ -59,7 +60,7 @@ class StrategyBacktester:
             for strategy in self.strategies:
                 # pass the relevant price information
                 
-                strategy.update(index, price, last_price, high_price)
+                strategy.update(index, price, last_price, high_price, low_price)
 
             # update
             last_price = price  # update previous price

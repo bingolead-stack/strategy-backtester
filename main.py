@@ -31,28 +31,23 @@ STATIC_LEVELS = [
 # Load JSON config from .txt
 with open("strategy_config.json", "r") as f:
     strategy_config = json.load(f)
-    long_dates = pd.date_range(
-        start=pd.to_datetime(strategy_config["long_start"]),
-        end=pd.to_datetime(strategy_config["long_end"]),
-        freq="30min"
-    ) if strategy_config["long_start"] and strategy_config["long_end"] else []
 
-    short_dates = pd.date_range(
-        start=pd.to_datetime(strategy_config["short_start"]),
-        end=pd.to_datetime(strategy_config["short_end"]),
-        freq="30min"
-    ) if strategy_config["short_start"] and strategy_config["short_end"] else []
-    
-    excluded_ranges = strategy_config.get("excluded_date_ranges", [])
-    excluded_dates = pd.DatetimeIndex([])
+    # Build long_dates
+    long_date_ranges = strategy_config.get("long_date_ranges", [])
+    long_dates = pd.DatetimeIndex([])
 
-    for start_str, end_str in excluded_ranges:
+    for start_str, end_str in long_date_ranges:
         start = pd.to_datetime(start_str)
         end = pd.to_datetime(end_str)
-        if start and end:
-            excluded_dates = excluded_dates.union(pd.date_range(start=start, end=end, freq="30min"))
+        long_dates = long_dates.union(pd.date_range(start=start, end=end, freq="30min"))
 
-    long_dates_excluded = long_dates.difference(excluded_dates)
+    short_date_ranges = strategy_config.get("short_date_ranges", [])
+    short_dates = pd.DatetimeIndex([])
+
+    for start_str, end_str in short_date_ranges:
+        start = pd.to_datetime(start_str)
+        end = pd.to_datetime(end_str)
+        short_dates = short_dates.union(pd.date_range(start=start, end=end, freq="30min"))
 
     strategy = Strategy(
         name=strategy_config["name"],
@@ -63,7 +58,7 @@ with open("strategy_config.json", "r") as f:
         re_entry_distance=strategy_config["re_entry_distance"],
         max_open_trades=strategy_config["max_open_trades"],
         max_contracts_per_trade=strategy_config["max_contracts_per_trade"],
-        long_dates=long_dates_excluded,
+        long_dates=long_dates,
         short_dates=short_dates
     )
 
