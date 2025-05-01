@@ -131,9 +131,7 @@ class Strategy:
                             stop_level = self.price - self.stop_loss_offset
                             trailing_stop = None
                             self.position = 'long'
-                            self.trade_history.append(
-                                (self.index, 'BUY', entry_price,
-                                 0))  # pnl for buy trade is $0 since we haven't locked in any pnl yet
+                            self.trade_history.append((self.index, 'BUY', entry_price, 0))  # pnl for buy trade is $0 since we haven't locked in any pnl yet
 
                             self.traded_levels[level] = self.price
                             
@@ -234,7 +232,7 @@ class Strategy:
                         # add tied up margin to the current cash
                         self.current_cash_value += entry_price * 0.1 * 4 * 12.5
                         self.total_pnl += pnl
-                        self.trade_history.append((self.index, 'SELL', self.price, pnl))
+                        self.trade_history.append((self.index, 'EXIT', self.price, pnl))
                         self.cumulative_pnl.append(self.total_pnl)
 
                         # clean up open trades
@@ -272,7 +270,7 @@ class Strategy:
                         self.current_cash_value += pnl
                         self.current_cash_value += entry_price * 0.1 * 4 * 12.5
                         self.total_pnl += pnl
-                        self.trade_history.append((self.index, 'COVER', self.price, pnl))
+                        self.trade_history.append((self.index, 'EXIT', self.price, pnl))
                         self.cumulative_pnl.append(self.total_pnl)
 
                         self.open_trade_count -= 1
@@ -314,8 +312,8 @@ class Strategy:
         print(f"Total Pnl for {self.name}: ${self.total_pnl}")
 
         # Trade Statistics
-        wins = [trade[3] for trade in self.trade_history if trade[1] == 'SELL' and trade[3] > 0]
-        losses = [trade[3] for trade in self.trade_history if trade[1] == 'SELL' and trade[3] <= 0]
+        wins = [trade[3] for trade in self.trade_history if trade[1] == 'EXIT' and trade[3] > 0]
+        losses = [trade[3] for trade in self.trade_history if trade[1] == 'EXIT' and trade[3] <= 0]
         win_percentage = len(wins) / max(1, (len(wins) + len(losses))) * 100
         lose_percentage = len(losses) / max(1, (len(wins) + len(losses))) * 100
         biggest_winner = max(wins, default=0)
