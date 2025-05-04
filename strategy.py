@@ -348,7 +348,7 @@ class Strategy:
 
         # Plot Cumulative PnL
         plt.figure(figsize=(10, 5))
-        plt.plot([x[0] for x in self.trade_history if x[1] == 'SELL'], self.cumulative_pnl,
+        plt.plot([x[0] for x in self.trade_history if x[1] == 'EXIT'], self.cumulative_pnl,
                  label='Cumulative PnL', color='b')
         plt.legend()
         plt.title(f"Cumulative PnL for {self.name}")
