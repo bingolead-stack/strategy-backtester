@@ -81,8 +81,7 @@ with open("optimizer_config.json", "r") as f:
         backtester.run_backtest()
 
         strategy.print_trade_stats()
-
-        results.append({
+        result = {
             'ENTRY_OFFSET': ENTRY_OFFSET,
             'TAKE_PROFIT_OFFSET': TAKE_PROFIT_OFFSET,
             'STOP_LOSS_OFFSET': STOP_LOSS_OFFSET,
@@ -96,9 +95,16 @@ with open("optimizer_config.json", "r") as f:
             "AVERAGE_LOSS": strategy.avgLoser,
             "NUM_OF_TRADE": strategy.total_trade,
             "REWARD_TO_RISK": strategy.reward_to_risk,
-        })
+        }
+
+        results.append(result)
+
+        # Write immediately to file
+        df = pd.DataFrame([result])
+        header = not os.path.exists(output_file)
+        df.to_csv(output_file, mode='a', index=False, header=header)
 
     # Convert to DataFrame for analysis
     results_df = pd.DataFrame(results)
     print("Optimization result is available now!")
-    results_df.to_csv(output_file, index=False)
+    results_df.to_csv("optimizer_total_result.csv", index=False)
