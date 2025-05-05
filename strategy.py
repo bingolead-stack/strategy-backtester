@@ -346,10 +346,6 @@ class Strategy:
         for level in self.static_levels:
             plt.axhline(y=level, color='gray', linestyle='--', linewidth=0.5)
 
-
-        # Tolerance to determine "near a static level"
-        TOLERANCE = 5  # Adjust this based on instrument scale
-
         # Plot trades and arrows near static levels
         for trade in self.trade_history:
             timestamp, action, price, pnl = trade
@@ -357,13 +353,12 @@ class Strategy:
             plt.scatter(timestamp, price, color=color)
 
             # Check if near any static level
-            if any(abs(price - level) <= TOLERANCE for level in self.static_levels):
-                # Arrow pointing up for BUY, down for SELL
-                arrow_props = dict(facecolor=color, arrowstyle='->', linewidth=1)
-                direction = 10 if action == 'BUY' else -10
-                plt.annotate('', xy=(timestamp, price + direction),
-                            xytext=(timestamp, price),
-                            arrowprops=arrow_props)
+            # Arrow pointing up for BUY, down for SELL
+            arrow_props = dict(facecolor=color, arrowstyle='->', linewidth=1)
+            direction = 10 if action == 'BUY' else -10
+            plt.annotate('', xy=(timestamp, price + direction),
+                        xytext=(timestamp, price),
+                        arrowprops=arrow_props)
                 
         plt.legend()
         plt.title(f"Price and Trade Entries for {self.name}")
