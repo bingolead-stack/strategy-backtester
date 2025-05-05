@@ -107,4 +107,4 @@ with open("optimizer_config.json", "r") as f:
     # Convert to DataFrame for analysis
     results_df = pd.DataFrame(results)
     print("Optimization result is available now!")
-    results_df.to_csv("optimizer_total_result.csv", index=False)
+    # results_df.to_csv("optimizer_total_result.csv", index=False)
