@@ -6,7 +6,7 @@ from strategy import Strategy
 from strategy_backtester import StrategyBacktester
 
 # Load historical data
-csv_file = "es-1m-cleaned.csv"
+csv_file = "es-30m-cleaned.csv"
 data = pd.read_csv(csv_file, parse_dates=[0], index_col=0)
 
 # Initialize backtester
@@ -24,7 +24,7 @@ with open("strategy_config.json", "r") as f:
     for start_str, end_str in long_date_ranges:
         start = pd.to_datetime(start_str)
         end = pd.to_datetime(end_str)
-        long_dates = long_dates.union(pd.date_range(start=start, end=end, freq="1min"))
+        long_dates = long_dates.union(pd.date_range(start=start, end=end, freq="30min"))
 
     short_date_ranges = strategy_config.get("short_date_ranges", [])
     short_dates = pd.DatetimeIndex([])
@@ -32,7 +32,7 @@ with open("strategy_config.json", "r") as f:
     for start_str, end_str in short_date_ranges:
         start = pd.to_datetime(start_str)
         end = pd.to_datetime(end_str)
-        short_dates = short_dates.union(pd.date_range(start=start, end=end, freq="1min"))
+        short_dates = short_dates.union(pd.date_range(start=start, end=end, freq="30min"))
 
     strategy = Strategy(
         name=strategy_config["name"],

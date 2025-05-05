@@ -21,9 +21,9 @@ class Strategy:
         self.is_trading = True
         self.name = name
         self.static_levels = None
-        self.entry_offset = entry_offset
-        self.take_profit_offset = take_profit_offset / 4 # convert to price
-        self.stop_loss_offset = stop_loss_offset / 4  # convert to price
+        self.entry_offset = entry_offset / 4 # convert from ticks to price 
+        self.take_profit_offset = take_profit_offset / 4 # convert from ticks to price
+        self.stop_loss_offset = stop_loss_offset / 4  # convert from ticks to price
         self.trail_trigger = trail_trigger
         self.re_entry_distance = re_entry_distance
         self.max_open_trades = max_open_trades
@@ -106,7 +106,7 @@ class Strategy:
             for level in self.static_levels:
                 entry_offset = self.entry_offset
                 if self.price <= level < self.last_price:  # Retrace level
-                    print(f"DEBUG: {self.name}: Price retraced to level {level}.")
+                    print(f"DEBUG: {self.name}: Price retraced to level {level} with price {self.price}.")
 
                     if level in self.traded_levels:  # If we've traded this level already
                         if abs(self.traded_levels[level] - self.price) >= self.re_entry_distance:
@@ -322,7 +322,7 @@ class Strategy:
         self.avgWinner = average_winner
         self.avgLoser = average_loser
         self.winrate = win_percentage
-        self.total_trade = len(self.trade_history)
+        self.total_trade = len(wins) + len(losses)
         self.reward_to_risk = average_winner / max(1, abs(average_loser))
 
         print(f"\n{self.name} | Trade Statistics:")
@@ -332,6 +332,7 @@ class Strategy:
         print(f"Average Winner: {average_winner:.2f}")
         print(f"Average Loser: {average_loser:.2f}")
         print(f"Total PnL: {self.total_pnl:.2f}")
+        print(f"Total Trade made: {self.total_trade}")
 
     def plot_trades(self, instrument_data):
 
