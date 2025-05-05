@@ -339,6 +339,8 @@ class Strategy:
         plt.figure(figsize=(10, 5))
         plt.plot(instrument_data.index, instrument_data['close'], label='Price')
         for trade in self.trade_history:
+            if trade[1] == "EXIT":
+                continue
             color = 'g' if trade[1] == 'BUY' else 'r'
             plt.scatter(trade[0], trade[2], color=color)
 

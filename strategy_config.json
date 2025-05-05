@@ -1,21 +1,13 @@
 {
   "name": "Strategy Best",
   "entry_offset": 10,
-  "take_profit_offset": 12800,
+  "take_profit_offset": 200,
   "stop_loss_offset": 200,
-  "trail_trigger": 2,
-  "re_entry_distance": 5,
+  "trail_trigger": 1,
+  "re_entry_distance": 1,
   "max_open_trades": 10,
   "max_contracts_per_trade": 1,
-  "long_date_ranges": [
-    ["2000-01-01", "2007-07-19"],
-    ["2009-04-30", "2011-08-04"],
-    ["2012-03-11", "2014-10-09"],
-    ["2016-07-10", "2018-12-05"],
-    ["2019-12-11", "2020-02-26"],
-    ["2020-05-19", "2022-03-14"],
-    ["2023-07-13", "2025-04-15"]
-  ],
+  "long_date_ranges": [],
   "short_date_ranges": [
     ["2007-07-20", "2009-04-29"],
     ["2011-08-05", "2012-03-12"],
