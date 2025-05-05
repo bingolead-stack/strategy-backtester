@@ -352,7 +352,7 @@ class Strategy:
 
         # Plot trades and arrows near static levels
         for trade in self.trade_history:
-            timestamp, action, price = trade
+            timestamp, action, price, pnl = trade
             color = 'g' if action == 'BUY' else 'r'
             plt.scatter(timestamp, price, color=color)
 
