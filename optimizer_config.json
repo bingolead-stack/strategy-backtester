@@ -5,7 +5,7 @@
     "STOP_LOSS_OFFSET": [10, 25, 50, 75, 100, 125, 150, 175, 200],
     "TRAIL_TRIGGER": [1, 2],
     "RE_ENTRY_DISTANCE": [1, 2, 5, 10],
-    "MAX_OPEN_TRADES": [10],
+    "MAX_OPEN_TRADES": [100],
     "MAX_CONTRACTS_PER_TRADE": [1]
   },
   "long_date_ranges": [
