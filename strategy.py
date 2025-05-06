@@ -35,10 +35,10 @@ class Strategy:
         self.stop_level = None
         self.trailing_stop = None
         self.trade_history = []
-        self.traded_levels = {}
         self.current_cash_value = 0
         self.open_trade_count = 0
         self.open_trade_list = []
+        self.retrace_levels = {}
 
         # other misc stats
         self.total_pnl = 0
@@ -73,6 +73,7 @@ class Strategy:
                 "You already have static levels loaded. Do you want to overwrite? Type True to overwrite or False to ignore "))
         if not overwrite:
             self.static_levels = sorted(static_levels)
+            self.retrace_levels = {i: False for i in range(len(static_levels))}
 
     def calculate_max_open_trades(self, price: float):
         """
@@ -105,47 +106,34 @@ class Strategy:
         if max_open_trades > 0:  # can trade
             for level in self.static_levels:
                 entry_offset = self.entry_offset
+                
+                if self.price <= level + entry_offset < self.last_price and self.retrace_levels[self.static_levels.index(level) + self.re_entry_distance]:
+                    self.retrace_levels[self.static_levels.index(level) + self.re_entry_distance] = False
+                    # Now the entry condition met. We can enter trade here.
+                    for _ in range(self.max_contracts_per_trade):  # number of contracts to trade
+                        entry_price = self.price
+                        stop_level = entry_price - self.stop_loss_offset
+                        trailing_stop = None
+                        self.position = 'long'
+                        self.trade_history.append((self.index, 'BUY', entry_price, 0))  # pnl for buy trade is $0 since we haven't locked in any pnl yet
+
+                        take_profit_level = entry_price + self.take_profit_offset
+                        trade = [self.index, entry_price, stop_level, trailing_stop, level, take_profit_level]
+
+                        self.open_trade_list.append(trade)
+                        self.open_trade_count += 1
+                        self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
+
+                        print(
+                            f"{self.name}: [{self.index}] BUY ORDER SENT at {entry_price} (Retraced to static level {level})")
+                        print(f"{self.name}: Stop-Loss Level: {stop_level}")
+                        max_open_trades -= 1
+
                 if self.price <= level < self.last_price:  # Retrace level
                     print(f"DEBUG: {self.name}: Price retraced to level {level} with price {self.price}.")
-
-                    if level in self.traded_levels:  # If we've traded this level already
-                        if abs(self.traded_levels[level] - self.price) >= self.re_entry_distance:
-                            # Allow re-entry at this level
-                            print(
-                                f"DEBUG: {self.name}:  Current price {self.price} retraced to level {level}. We last traded at {self.traded_levels[level]}"
-                                f" with additional offset of {self.re_entry_distance} we can now re-enter")
-
-                            del self.traded_levels[level]  # Reset re-entry condition for this level
-
-                        else:
-                            print(
-                                f"DEBUG: {self.name}: Level {level} already traded, re-entry condition not met.")
-                            continue  # Skip this level, as re-entry condition is not met
-
-                    # check if we can enter here (offset above entry level)
-                    if self.price + entry_offset <= level:
-                        for _ in range(self.max_contracts_per_trade):  # number of contracts to trade
-
-                            entry_price = self.price
-                            stop_level = self.price - self.stop_loss_offset
-                            trailing_stop = None
-                            self.position = 'long'
-                            self.trade_history.append((self.index, 'BUY', entry_price, 0))  # pnl for buy trade is $0 since we haven't locked in any pnl yet
-
-                            self.traded_levels[level] = self.price
-                            
-                            take_profit_level = entry_price + self.take_profit_offset
-                            trade = [self.index, entry_price, stop_level, trailing_stop, level, take_profit_level]
-
-                            # trade = [self.index, entry_price, stop_level, trailing_stop, level]  # store our open trades
-                            self.open_trade_list.append(trade)
-                            self.open_trade_count += 1
-                            self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
-
-                            print(
-                                f"{self.name}: [{self.index}] BUY ORDER SENT at {entry_price} (Retraced to static level {level})")
-                            print(f"{self.name}: Stop-Loss Level: {stop_level}")
-                            max_open_trades -= 1
+                    self.retrace_levels[self.static_levels.index(level)] = True
+                elif self.price >= level > self.last_price:
+                    self.retrace_levels[self.static_levels.index(level)] = False
         else:
             print(
                 f"DEBUG: {self.name}: Open trade = {self.open_trade_count}, max open trades = {self.max_open_trades}. No room left to trade. Skipping")
@@ -157,30 +145,18 @@ class Strategy:
         if max_open_trades > 0:  # can trade
             for level in self.static_levels:
                 entry_offset = self.entry_offset
-                if self.price >= level > self.last_price:  # Retrace level upwards
-                    print(f"DEBUG: {self.name}: Price retraced up to level {level}.")
 
-                    if level in self.traded_levels:  # Already traded this level
-                        if abs(self.traded_levels[level] - self.price) >= self.re_entry_distance:
-                            print(
-                                f"DEBUG: {self.name}: Current price {self.price} retraced up to level {level}. We last traded at {self.traded_levels[level]}"
-                                f" with additional offset of {self.re_entry_distance} we can now re-enter")
-                            del self.traded_levels[level]  # Allow re-entry
-                        else:
-                            print(
-                                f"DEBUG: {self.name}: Level {level} already traded, re-entry condition not met.")
-                            continue
+                if self.price > level - entry_offset >= self.last_price and self.retrace_levels[self.static_levels.index(level) - self.re_entry_distance]:
+                    self.retrace_levels[self.static_levels.index(level) - self.re_entry_distance] = False
 
-                    if self.price - entry_offset >= level:
-                        for _ in range(self.max_contracts_per_trade):  # number of contracts to trade
+                    # We can enter trade here.
+                    for _ in range(self.max_contracts_per_trade):  # number of contracts to trade
 
                             entry_price = self.price
                             stop_level = self.price + self.stop_loss_offset
                             trailing_stop = None
                             self.position = 'short'
                             self.trade_history.append((self.index, 'SELL', entry_price, 0))
-
-                            self.traded_levels[level] = self.price
 
                             take_profit_level = entry_price - self.take_profit_offset
                             trade = [self.index, entry_price, stop_level, trailing_stop, level, take_profit_level]
@@ -191,6 +167,14 @@ class Strategy:
                             print(f"{self.name}: [{self.index}] SELL ORDER SENT at {entry_price} (Retraced up to static level {level})")
                             print(f"{self.name}: Stop-Loss Level: {stop_level}")
                             max_open_trades -= 1
+
+
+                if self.price >= level > self.last_price:  # Retrace level
+                    print(f"DEBUG: {self.name}: Price retraced to level {level} with price {self.price}.")
+                    self.retrace_levels[self.static_levels.index(level)] = True
+                elif self.price <= level < self.last_price:
+                    self.retrace_levels[self.static_levels.index(level)] = False
+                        
         else:
             print(f"DEBUG: {self.name}: Open trade = {self.open_trade_count}, max open trades = {self.max_open_trades}. No room left to trade. Skipping")
 
@@ -211,17 +195,17 @@ class Strategy:
 
 
                         trigger_price = self.static_levels[index_of_level + self.trail_trigger]  # find the price 2 levels up
-                        if self.price >= trigger_price:
+                        if self.price > trigger_price:
                             print(f"{self.name}: [{self.index}] Trailing stop activated for long position")
                             trailing_stop = trigger_price
                             self.open_trade_list[i][3] = trailing_stop  # update our trailing stop
 
-                    if trailing_stop is not None:
-                        # we take the closest price to the high of the day thats below it
-                        highest_static_level = sorted([x for x in self.static_levels if x < self.high_price])[
-                            -1]  # get highest value
-                        trailing_stop = max(trailing_stop, highest_static_level)  # use high
-                        self.open_trade_list[i][3] = trailing_stop  # update trailing stop
+                    # if trailing_stop is not None:
+                    #     # we take the closest price to the high of the day thats below it
+                    #     highest_static_level = sorted([x for x in self.static_levels if x < self.high_price])[
+                    #         -1]  # get highest value
+                    #     trailing_stop = max(trailing_stop, highest_static_level)  # use high
+                    #     self.open_trade_list[i][3] = trailing_stop  # update trailing stop
 
                     if self.price <= stop_level or (trailing_stop is not None and self.price <= trailing_stop) or (self.price >= take_profit_level):
                         # trade_history.append((index, 'SELL', price))
@@ -258,11 +242,11 @@ class Strategy:
                             trailing_stop = trigger_price
                             self.open_trade_list[i][3] = trailing_stop
 
-                    if trailing_stop is not None:
-                        # take the lowest static level above the low of the day
-                        lowest_static_level = sorted([x for x in self.static_levels if x > self.low_price])[0]
-                        trailing_stop = min(trailing_stop, lowest_static_level)
-                        self.open_trade_list[i][3] = trailing_stop
+                    # if trailing_stop is not None:
+                    #     # take the lowest static level above the low of the day
+                    #     lowest_static_level = sorted([x for x in self.static_levels if x > self.low_price])[0]
+                    #     trailing_stop = min(trailing_stop, lowest_static_level)
+                    #     self.open_trade_list[i][3] = trailing_stop
 
                     if self.price >= stop_level or (trailing_stop is not None and self.price >= trailing_stop) or (self.price <= take_profit_level):
                         pnl = (entry_price - self.price) * 50
@@ -338,7 +322,9 @@ class Strategy:
 
         # Plot Price and Trade Entries
         plt.figure(figsize=(10, 5))
-        plt.plot(instrument_data.index, instrument_data['close'], label='Price')
+        plt.plot(instrument_data.index, instrument_data['close'], label='Price', color='black')
+
+        plt.scatter(instrument_data.index, instrument_data['close'], color='blue', s=5, label='Close Price Dots')
         for trade in self.trade_history:
             if trade[1] == "EXIT":
                 continue
@@ -347,7 +333,7 @@ class Strategy:
 
         # Add horizontal lines for static levels
         for level in self.static_levels:
-            plt.axhline(y=level, color='gray', linestyle='--', linewidth=0.5)
+            plt.axhline(y=level, color='black', linestyle='--', linewidth=0.5)
                 
         plt.legend()
         plt.title(f"Price and Trade Entries for {self.name}")
