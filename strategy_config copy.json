@@ -1,11 +1,11 @@
 {
   "name": "Strategy Best",
-  "entry_offset": 10,
-  "take_profit_offset": 200,
+  "entry_offset": 75,
+  "take_profit_offset": 12800,
   "stop_loss_offset": 200,
   "trail_trigger": 1,
   "re_entry_distance": 1,
-  "max_open_trades": 10,
+  "max_open_trades": 100,
   "max_contracts_per_trade": 1,
   "long_date_ranges": [
     ["2000-01-01", "2007-07-19"],
