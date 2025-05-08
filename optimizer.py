@@ -1,8 +1,8 @@
 from itertools import product
 import json
 
-from strategy import Strategy
-from strategy_backtester import StrategyBacktester
+from strategy.strategy import Strategy
+from strategy.strategy_backtester import StrategyBacktester
 
 import pandas as pd
 import os

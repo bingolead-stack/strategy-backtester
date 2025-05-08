@@ -2,8 +2,8 @@ import json
 from datetime import datetime, timedelta
 import pandas as pd
 
-from strategy import Strategy
-from strategy_backtester import StrategyBacktester
+from strategy.strategy import Strategy
+from strategy.strategy_backtester import StrategyBacktester
 
 # Load historical data
 csv_file = "es-30m-cleaned.csv"

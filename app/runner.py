@@ -1,10 +1,10 @@
 import websocket
 import json
 from datetime import datetime
-from strategy import Strategy
+from strategy.strategy import Strategy
 import pandas as pd
 
-from token_manager import TokenManager
+from app.token_manager import TokenManager
 
 token_manager = TokenManager()
 token_manager.start()

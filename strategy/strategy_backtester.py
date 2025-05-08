@@ -4,7 +4,7 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 
-from strategy import Strategy
+from strategy.strategy import Strategy
 
 
 class StrategyBacktester:
