@@ -6,14 +6,14 @@ from strategy.strategy import Strategy
 from strategy.strategy_backtester import StrategyBacktester
 
 # Load historical data
-csv_file = "es-30m-cleaned.csv"
+csv_file = "data/es-30m-cleaned.csv"
 data = pd.read_csv(csv_file, parse_dates=[0], index_col=0)
 
 # Initialize backtester
 bt = StrategyBacktester()
 
 # Load JSON config from .txt
-with open("strategy_config.json", "r") as f:
+with open("backtest_config.json", "r") as f:
     strategy_config = json.load(f)
 
     STATIC_LEVELS = strategy_config.get("static_levels", [])
