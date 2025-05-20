@@ -200,12 +200,9 @@ class Strategy:
                             trailing_stop = trigger_price
                             self.open_trade_list[i][3] = trailing_stop  # update our trailing stop
 
-                    # if trailing_stop is not None:
-                    #     # we take the closest price to the high of the day thats below it
-                    #     highest_static_level = sorted([x for x in self.static_levels if x < self.high_price])[
-                    #         -1]  # get highest value
-                    #     trailing_stop = max(trailing_stop, highest_static_level)  # use high
-                    #     self.open_trade_list[i][3] = trailing_stop  # update trailing stop
+                    if trailing_stop is not None:
+                        trailing_stop = max(trailing_stop, self.price - self.stop_loss_offset)  # use high
+                        self.open_trade_list[i][3] = trailing_stop  # update trailing stop
 
                     if self.price <= stop_level or (trailing_stop is not None and self.price <= trailing_stop) or (self.price >= take_profit_level):
                         # trade_history.append((index, 'SELL', price))
@@ -242,11 +239,11 @@ class Strategy:
                             trailing_stop = trigger_price
                             self.open_trade_list[i][3] = trailing_stop
 
-                    # if trailing_stop is not None:
-                    #     # take the lowest static level above the low of the day
-                    #     lowest_static_level = sorted([x for x in self.static_levels if x > self.low_price])[0]
-                    #     trailing_stop = min(trailing_stop, lowest_static_level)
-                    #     self.open_trade_list[i][3] = trailing_stop
+                    if trailing_stop is not None:
+                        # take the lowest static level above the low of the day
+                        # lowest_static_level = sorted([x for x in self.static_levels if x > self.low_price])[0]
+                        trailing_stop = min(trailing_stop, self.price + self.stop_loss_offset)
+                        self.open_trade_list[i][3] = trailing_stop
 
                     if self.price >= stop_level or (trailing_stop is not None and self.price >= trailing_stop) or (self.price <= take_profit_level):
                         pnl = (entry_price - self.price) * 50
