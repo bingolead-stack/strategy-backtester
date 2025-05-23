@@ -1,7 +1,7 @@
 {
   "name": "Strategy Best",
   "entry_offset": 75,
-  "take_profit_offset": 12800,
+  "take_profit_offset": 100000000,
   "stop_loss_offset": 200,
   "trail_trigger": 1,
   "re_entry_distance": 1,

@@ -8,7 +8,7 @@ import pandas as pd
 import os
 
 # Delete previous optimizer result if it exists
-output_file = "optimizer_result.csv"
+output_file = "short_result/optimizer_result.csv"
 if os.path.exists(output_file):
     os.remove(output_file)
     print(f"Deleted existing file: {output_file}")
@@ -39,7 +39,7 @@ with open("optimizer_config.json", "r") as f:
         end = pd.to_datetime(end_str)
         short_dates = short_dates.union(pd.date_range(start=start, end=end, freq="30min"))
 
-    csv_file = "es-30m-cleaned.csv"
+    csv_file = "data/es-30m-cleaned.csv"
     data = pd.read_csv(csv_file, parse_dates=[0], index_col=0)
 
     for i, combo in enumerate(combinations):
