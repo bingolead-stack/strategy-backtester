@@ -8,7 +8,7 @@ import pandas as pd
 import os
 
 # Delete previous optimizer result if it exists
-output_file = "short_result/optimizer_result.csv"
+output_file = "long_result/optimizer_result.csv"
 if os.path.exists(output_file):
     os.remove(output_file)
     print(f"Deleted existing file: {output_file}")
