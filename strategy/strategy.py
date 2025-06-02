@@ -48,6 +48,7 @@ class Strategy:
         self.avgLoser = 0
         self.total_trade = 0
         self.reward_to_risk = 0
+        self.max_losing_streak = 0
 
         # current market state
         self.price = None
@@ -306,6 +307,16 @@ class Strategy:
         self.total_trade = len(wins) + len(losses)
         self.reward_to_risk = average_winner / max(1, abs(average_loser))
 
+        # Calculate longest losing streak
+        current_streak = 0
+        for trade in self.trade_history:
+            if trade[1] == 'EXIT':
+                if trade[3] <= 0:
+                    current_streak += 1
+                    self.max_losing_streak = max(self.max_losing_streak, current_streak)
+                else:
+                    current_streak = 0
+
         print(f"\n{self.name} | Trade Statistics:")
         print(f"Win %: {win_percentage:.2f}%, Lose %: {lose_percentage:.2f}%")
         print(f"Biggest Winner: {biggest_winner:.2f}")
@@ -314,6 +325,7 @@ class Strategy:
         print(f"Average Loser: {average_loser:.2f}")
         print(f"Total PnL: {self.total_pnl:.2f}")
         print(f"Total Trade made: {self.total_trade}")
+        print(f"Highest consecutive lose: {self.max_losing_streak}")
 
     def plot_trades(self, instrument_data):
 

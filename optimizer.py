@@ -80,6 +80,7 @@ with open("optimizer_config.json", "r") as f:
             "AVERAGE_LOSS": strategy.avgLoser,
             "NUM_OF_TRADE": strategy.total_trade,
             "REWARD_TO_RISK": strategy.reward_to_risk,
+            "MAX_CONSECUTIVE_LOSE": strategy.max_losing_streak,
         }
 
         results.append(result)
