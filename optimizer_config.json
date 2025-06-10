@@ -6,7 +6,7 @@
     "TRAIL_TRIGGER": [1, 2],
     "RE_ENTRY_DISTANCE": [1, 2, 5, 10],
     "MAX_OPEN_TRADES": [10],
-    "MAX_CONTRACTS_PER_TRADE": [100]
+    "MAX_CONTRACTS_PER_TRADE": [1]
   },
   "long_date_ranges": [
     ["2000-01-01", "2007-07-19"],
