@@ -8,7 +8,7 @@ import pandas as pd
 import os
 
 
-OPTIMIZE_LONG = True
+OPTIMIZE_LONG = False
 
 # Delete previous optimizer result if it exists
 output_file = "long_result/optimizer_result.csv" if OPTIMIZE_LONG else "short_result/optimizer_result.csv"
