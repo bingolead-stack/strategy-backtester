@@ -20,7 +20,7 @@ strategy = None
 async def lifespan(app: FastAPI):
     global strategy
     logger.info("App startup event triggered")
-    with open("app_config.json", "r") as f:
+    with open("config.json", "r") as f:
         strategy_config = json.load(f)
 
     STATIC_LEVELS = strategy_config.get("static_levels", [])
