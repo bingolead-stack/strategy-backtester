@@ -13,7 +13,7 @@ data = pd.read_csv(csv_file, parse_dates=[0], index_col=0)
 bt = StrategyBacktester()
 
 # Load JSON config from .txt
-with open("backtest_config.json", "r") as f:
+with open("strategy/backtest_config.json", "r") as f:
     strategy_config = json.load(f)
 
     STATIC_LEVELS = strategy_config.get("static_levels", [])
@@ -36,6 +36,7 @@ with open("backtest_config.json", "r") as f:
 
     strategy = Strategy(
         name=strategy_config["name"],
+        trader=None,
         entry_offset=strategy_config["entry_offset"],
         take_profit_offset=strategy_config["take_profit_offset"],
         stop_loss_offset=strategy_config["stop_loss_offset"],

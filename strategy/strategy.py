@@ -114,7 +114,8 @@ class Strategy:
                         self.open_trade_list.append(trade)
                         self.open_trade_count += 1
                         self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
-                        self.trader.enter_position(quantity=1, is_long=True)
+                        if self.trader is not None:
+                            self.trader.enter_position(quantity=1, is_long=True)
 
                         print(
                             f"{self.name}: [{self.index}] BUY ORDER SENT at {entry_price} (Retraced to static level {level})")
@@ -210,7 +211,8 @@ class Strategy:
                         # clean up open trades
                         self.open_trade_count -= 1
                         trades_to_remove.append([trade_time, entry_price, stop_level, trailing_stop, traded_level, take_profit_level])
-                        self.trader.enter_position(quantity=1, is_long=False)
+                        if self.trader is not None:
+                            self.trader.enter_position(quantity=1, is_long=False)
 
                         print(
                             f"[{self.index}] SELL ORDER EXECUTED at {self.price} (stop level hit {stop_level} or trailing stop hit at {trailing_stop})\n"

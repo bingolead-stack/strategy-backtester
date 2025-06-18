@@ -11,14 +11,14 @@ import os
 OPTIMIZE_LONG = False
 
 # Delete previous optimizer result if it exists
-output_file = "long_result/optimizer_result.csv" if OPTIMIZE_LONG else "short_result/optimizer_result.csv"
+output_file = "strategy/long_result/optimizer_result.csv" if OPTIMIZE_LONG else "strategy/short_result/optimizer_result.csv"
 if os.path.exists(output_file):
     os.remove(output_file)
     print(f"Deleted existing file: {output_file}")
 
 results = []
 # === Load Config ===
-with open("optimizer_config.json", "r") as f:
+with open("strategy/optimizer_config.json", "r") as f:
     optimizer_config = json.load(f)
     STATIC_LEVELS = optimizer_config.get("static_levels", [])
     param_grid = optimizer_config["param_grid"]
@@ -50,6 +50,7 @@ with open("optimizer_config.json", "r") as f:
         
         strategy = Strategy(
             name=f"Combo {i}",
+            trader=None,
             entry_offset=ENTRY_OFFSET,
             take_profit_offset=TAKE_PROFIT_OFFSET,
             stop_loss_offset=STOP_LOSS_OFFSET,
