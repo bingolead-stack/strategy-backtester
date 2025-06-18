@@ -32,7 +32,7 @@ STATIC_LEVELS = [
     7870, 7928.5, 7987
 ]
 trader = TradovateTrader()
-strategy = Strategy(
+strategy1 = Strategy(
     name="High PNL Strategy",
     trader=trader,
     entry_offset=100,
@@ -43,7 +43,34 @@ strategy = Strategy(
     max_open_trades=10,
     max_contracts_per_trade=1
 )
-strategy.load_static_levels(STATIC_LEVELS)
+strategy1.load_static_levels(STATIC_LEVELS)
+
+strategy2 = Strategy(
+    name="High Win Rate Strategy",
+    trader=trader,
+    entry_offset=10,
+    take_profit_offset=25,
+    stop_loss_offset=200,
+    trail_trigger=5,
+    re_entry_distance=1,
+    max_open_trades=10,
+    max_contracts_per_trade=1
+)
+strategy2.load_static_levels(STATIC_LEVELS)
+
+strategy3 = Strategy(
+    name="Balanced Strategy",
+    trader=trader,
+    entry_offset=100,
+    take_profit_offset=25600,
+    stop_loss_offset=200,
+    trail_trigger=2,
+    re_entry_distance=2,
+    max_open_trades=10,
+    max_contracts_per_trade=1
+)
+strategy3.load_static_levels(STATIC_LEVELS)
+
 last_price = None
 
 app = FastAPI()
