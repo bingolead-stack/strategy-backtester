@@ -1,12 +1,13 @@
 from datetime import datetime
 from typing import List
-
 from matplotlib import pyplot as plt
+
+from lib.tradovate_api import TradovateTrader
 
 class Strategy:
 
-    def __init__(self, name: str, entry_offset, take_profit_offset, stop_loss_offset, trail_trigger, re_entry_distance,
-                 max_open_trades, max_contracts_per_trade, long_dates, short_dates):
+    def __init__(self, name: str, trader:TradovateTrader, entry_offset, take_profit_offset, stop_loss_offset, trail_trigger, re_entry_distance,
+                 max_open_trades, max_contracts_per_trade, long_dates = None, short_dates = None):
         """
         :param entry_offset: offset above signal to enter trade
         :param take_profit_offset: offset number of ticks above signal to close for profit
@@ -20,6 +21,7 @@ class Strategy:
         # Init strategy values
         self.is_trading = True
         self.name = name
+        self.trader = trader
         self.static_levels = None
         self.entry_offset = entry_offset / 4 # convert from ticks to price 
         self.take_profit_offset = take_profit_offset / 4 # convert from ticks to price
@@ -61,19 +63,8 @@ class Strategy:
         self.short_dates = short_dates
 
     def load_static_levels(self, static_levels: List[int]):
-        """
-
-        :param static_levels: List of static levels
-        :return: None, assigns our static levels for this strategy. Separate to init as we may want to have custom
-        static level parsing
-        """
-        overwrite = False
-        if self.static_levels is not None:
-            overwrite = bool(input(
-                "You already have static levels loaded. Do you want to overwrite? Type True to overwrite or False to ignore "))
-        if not overwrite:
-            self.static_levels = sorted(static_levels)
-            self.retrace_levels = {i: False for i in range(len(static_levels))}
+        self.static_levels = sorted(static_levels)
+        self.retrace_levels = {i: False for i in range(len(static_levels))}
 
     def calculate_max_open_trades(self, price: float):
         """
@@ -123,6 +114,7 @@ class Strategy:
                         self.open_trade_list.append(trade)
                         self.open_trade_count += 1
                         self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
+                        self.trader.enter_position(quantity=1, is_long=True)
 
                         print(
                             f"{self.name}: [{self.index}] BUY ORDER SENT at {entry_price} (Retraced to static level {level})")
@@ -218,6 +210,7 @@ class Strategy:
                         # clean up open trades
                         self.open_trade_count -= 1
                         trades_to_remove.append([trade_time, entry_price, stop_level, trailing_stop, traded_level, take_profit_level])
+                        self.trader.enter_position(quantity=1, is_long=False)
 
                         print(
                             f"[{self.index}] SELL ORDER EXECUTED at {self.price} (stop level hit {stop_level} or trailing stop hit at {trailing_stop})\n"
@@ -266,7 +259,6 @@ class Strategy:
             for trade in trades_to_remove:
                 del self.open_trade_list[self.open_trade_list.index(trade)]  # remove the open trade
 
-
     def update(self, index: datetime, price: float, last_price: float, high_price: float, low_price: float):
         # check prices are valid
         if None in [price, last_price, high_price]:
@@ -278,11 +270,11 @@ class Strategy:
             self.low_price = low_price
             self.index = index
 
-            if index in self.long_dates:
-                self.run_buy_strategy()
-            elif index in self.short_dates:
-                self.run_sell_strategy()
-
+            # if index in self.long_dates:
+            #     self.run_buy_strategy()
+            # elif index in self.short_dates:
+            #     self.run_sell_strategy()
+            self.run_buy_strategy()
             self.check_trade_to_remove()
 
     def print_trade_stats(self):

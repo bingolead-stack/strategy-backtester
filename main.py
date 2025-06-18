@@ -8,6 +8,7 @@ from datetime import datetime
 import uvicorn
 import logging
 
+from lib.tradovate_api import TradovateTrader
 from strategy.strategy import Strategy
 
 # Set up logging
@@ -25,32 +26,18 @@ async def lifespan(app: FastAPI):
 
     STATIC_LEVELS = strategy_config.get("static_levels", [])
     logger.info("Loaded static levels")
-
-    long_date_ranges = strategy_config.get("long_date_ranges", [])
-    long_dates = pd.DatetimeIndex([])
-    for start_str, end_str in long_date_ranges:
-        start = pd.to_datetime(start_str)
-        end = pd.to_datetime(end_str)
-        long_dates = long_dates.union(pd.date_range(start=start, end=end, freq="30min"))
-
-    short_date_ranges = strategy_config.get("short_date_ranges", [])
-    short_dates = pd.DatetimeIndex([])
-    for start_str, end_str in short_date_ranges:
-        start = pd.to_datetime(start_str)
-        end = pd.to_datetime(end_str)
-        short_dates = short_dates.union(pd.date_range(start=start, end=end, freq="30min"))
-
+    
+    trader = TradovateTrader()
     strategy = Strategy(
         name=strategy_config["name"],
+        trader=trader,
         entry_offset=strategy_config["entry_offset"],
         take_profit_offset=strategy_config["take_profit_offset"],
         stop_loss_offset=strategy_config["stop_loss_offset"],
         trail_trigger=strategy_config["trail_trigger"],
         re_entry_distance=strategy_config["re_entry_distance"],
         max_open_trades=strategy_config["max_open_trades"],
-        max_contracts_per_trade=strategy_config["max_contracts_per_trade"],
-        long_dates=long_dates,
-        short_dates=short_dates
+        max_contracts_per_trade=strategy_config["max_contracts_per_trade"]
     )
     strategy.load_static_levels(STATIC_LEVELS)
     logger.info("Strategy initialized")
