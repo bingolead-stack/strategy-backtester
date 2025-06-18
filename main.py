@@ -81,8 +81,8 @@ class Signal(BaseModel):
 
 @app.post("/webhook")
 async def receive_signal(signal: Signal):
-    global last_price, strategy
-    if strategy is None:
+    global last_price, strategy1, strategy2, strategy3
+    if strategy1 is None:
         logger.error("Strategy not initialized")
         raise HTTPException(status_code=500, detail="Strategy not initialized")
 
@@ -91,7 +91,7 @@ async def receive_signal(signal: Signal):
         last_price = signal.close
         return {"status": "success"}
     
-    strategy.update(datetime.now(), last_price, signal.close, signal.high, signal.low)
+    strategy1.update(datetime.now(), last_price, signal.close, signal.high, signal.low)
     last_price = signal.close
     return {"status": "success"}
 
