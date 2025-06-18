@@ -1,7 +1,5 @@
 import threading
 import httpx
-import datetime
-import requests
 import time
 from dotenv import load_dotenv
 import os
