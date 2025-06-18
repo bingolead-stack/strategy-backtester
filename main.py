@@ -1,8 +1,6 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi import FastAPI
-from contextlib import asynccontextmanager
 from pydantic import BaseModel
-import json
 import pandas as pd
 from datetime import datetime
 import uvicorn
