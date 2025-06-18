@@ -55,7 +55,6 @@ class Strategy:
         self.last_price = None
         self.high_price = None
         self.index = None
-        self.access_token = None
 
         # daterange stuff
         self.long_dates = long_dates
