@@ -15,8 +15,6 @@ from strategy.strategy import Strategy
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-strategy = None
-last_price = None
 STATIC_LEVELS = [
     31, 89.5, 148, 206.5, 265, 323.5, 382, 440.5, 499, 557.5, 616, 674.5, 733,
     791.5, 850, 908.5, 967, 1025.5, 1084, 1142.5, 1201, 1259.5, 1318, 1376.5,
@@ -33,29 +31,22 @@ STATIC_LEVELS = [
     7285, 7343.5, 7402, 7460.5, 7519, 7577.5, 7636, 7694.5, 7753, 7811.5,
     7870, 7928.5, 7987
 ]
+trader = TradovateTrader()
+strategy = Strategy(
+    name="High PNL Strategy",
+    trader=trader,
+    entry_offset=100,
+    take_profit_offset=12800,
+    stop_loss_offset=200,
+    trail_trigger=5,
+    re_entry_distance=1,
+    max_open_trades=10,
+    max_contracts_per_trade=1
+)
+strategy.load_static_levels(STATIC_LEVELS)
+last_price = None
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global strategy
-    logger.info("App startup event triggered")
-    trader = TradovateTrader()
-    strategy = Strategy(
-        name="High PNL Strategy",
-        trader=trader,
-        entry_offset=100,
-        take_profit_offset=12800,
-        stop_loss_offset=200,
-        trail_trigger=5,
-        re_entry_distance=1,
-        max_open_trades=10,
-        max_contracts_per_trade=1
-    )
-    strategy.load_static_levels(STATIC_LEVELS)
-    logger.info("Strategy initialized")
-
-    yield
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 class Signal(BaseModel):
     open: float
@@ -76,7 +67,7 @@ async def receive_signal(signal: Signal):
         return {"status": "success"}
     
     strategy.update(datetime.now(), last_price, signal.close, signal.high, signal.low)
-
+    last_price = signal.close
     return {"status": "success"}
 
 if __name__ == "__main__":
