@@ -16,28 +16,39 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 strategy = None
+last_price = None
+STATIC_LEVELS = [
+    31, 89.5, 148, 206.5, 265, 323.5, 382, 440.5, 499, 557.5, 616, 674.5, 733,
+    791.5, 850, 908.5, 967, 1025.5, 1084, 1142.5, 1201, 1259.5, 1318, 1376.5,
+    1435, 1493.5, 1552, 1610.5, 1669, 1727.5, 1786, 1844.5, 1903, 1961.5,
+    2020, 2078.5, 2137, 2195.5, 2254, 2312.5, 2371, 2429.5, 2488, 2546.5,
+    2605, 2663.5, 2722, 2780.5, 2839, 2897.5, 2956, 3014.5, 3073, 3131.5,
+    3190, 3248.5, 3307, 3365.5, 3424, 3482.5, 3541, 3599.5, 3658, 3716.5,
+    3775, 3833.5, 3892, 3950.5, 4009, 4067.5, 4126, 4184.5, 4243, 4301.5,
+    4360, 4418.5, 4477, 4535.5, 4594, 4652.5, 4711, 4769.5, 4828, 4886.5,
+    4945, 5003.5, 5062, 5120.5, 5179, 5237.5, 5296, 5354.5, 5413, 5471.5,
+    5530, 5588.5, 5647, 5705.5, 5764, 5822.5, 5881, 5939.5, 5998, 6056.5,
+    6115, 6173.5, 6232, 6290.5, 6349, 6407.5, 6466, 6524.5, 6583, 6641.5,
+    6700, 6758.5, 6817, 6875.5, 6934, 6992.5, 7051, 7109.5, 7168, 7226.5,
+    7285, 7343.5, 7402, 7460.5, 7519, 7577.5, 7636, 7694.5, 7753, 7811.5,
+    7870, 7928.5, 7987
+]
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global strategy
     logger.info("App startup event triggered")
-    with open("config.json", "r") as f:
-        strategy_config = json.load(f)
-
-    STATIC_LEVELS = strategy_config.get("static_levels", [])
-    logger.info("Loaded static levels")
-    
     trader = TradovateTrader()
     strategy = Strategy(
-        name=strategy_config["name"],
+        name="High PNL Strategy",
         trader=trader,
-        entry_offset=strategy_config["entry_offset"],
-        take_profit_offset=strategy_config["take_profit_offset"],
-        stop_loss_offset=strategy_config["stop_loss_offset"],
-        trail_trigger=strategy_config["trail_trigger"],
-        re_entry_distance=strategy_config["re_entry_distance"],
-        max_open_trades=strategy_config["max_open_trades"],
-        max_contracts_per_trade=strategy_config["max_contracts_per_trade"]
+        entry_offset=100,
+        take_profit_offset=12800,
+        stop_loss_offset=200,
+        trail_trigger=5,
+        re_entry_distance=1,
+        max_open_trades=10,
+        max_contracts_per_trade=1
     )
     strategy.load_static_levels(STATIC_LEVELS)
     logger.info("Strategy initialized")
@@ -47,33 +58,26 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 class Signal(BaseModel):
-    symbol: str
-    action: str  # e.g., 'buy' or 'sell'
-    timestamp: str  # ISO format timestamp
-    price: float
-
+    open: float
+    high: float
+    low: float
+    close: float
 
 @app.post("/webhook")
 async def receive_signal(signal: Signal):
+    global last_price, strategy
     if strategy is None:
         logger.error("Strategy not initialized")
         raise HTTPException(status_code=500, detail="Strategy not initialized")
 
     logger.info(f"Received signal: {signal}")
-
-    signal_time = pd.to_datetime(signal.timestamp)
-    if signal.action.lower() == 'buy':
-        strategy.enter_long(signal.symbol, signal.price, signal_time)
-        logger.info(f"Entered long position for {signal.symbol} at {signal.price}")
-    elif signal.action.lower() == 'sell':
-        strategy.enter_short(signal.symbol, signal.price, signal_time)
-        logger.info(f"Entered short position for {signal.symbol} at {signal.price}")
-    else:
-        logger.error("Unknown action type")
-        raise HTTPException(status_code=400, detail="Unknown action type")
+    if last_price is None:
+        last_price = signal.close
+        return {"status": "success"}
+    
+    strategy.update(datetime.now(), last_price, signal.close, signal.high, signal.low)
 
     return {"status": "success"}
-
 
 if __name__ == "__main__":
     logger.info("Starting FastAPI application...")
