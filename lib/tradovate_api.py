@@ -7,8 +7,9 @@ from lib.token_manager import TokenManager
 load_dotenv()
 
 class TradovateTrader:
-    def __init__(self):
+    def __init__(self, symbol):
         self.account_id = None
+        self.symbol = symbol
         self.username = os.getenv("TRADOVATE_USERNAME")
         self.api_url = os.getenv("TRADOVATE_API_URL")
         self.token_manager = TokenManager()
@@ -25,7 +26,7 @@ class TradovateTrader:
         headers = {"Authorization": f"Bearer {access_token}"}
 
         async with httpx.AsyncClient() as client:
-            res = await client.get(f"{self.api_url}/account/list", params={"name": "ESM5"}, headers=headers)
+            res = await client.get(f"{self.api_url}/account/list", params={"name": self.symbol}, headers=headers)
             res.raise_for_status()
             accounts = res.json()
             print(f"Found {len(accounts)} accounts.")
@@ -43,7 +44,7 @@ class TradovateTrader:
             "accountSpec": self.username,
             "accountId": self.account_id,
             "action": side,
-            "symbol": "ESM5",
+            "symbol": self.symbol,
             "orderQty": quantity,
             "orderType": "Market",
             "isAutomated": True

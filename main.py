@@ -5,6 +5,7 @@ import pandas as pd
 from datetime import datetime
 import uvicorn
 import logging
+import asyncio
 
 from lib.tradovate_api import TradovateTrader
 from strategy.strategy import Strategy
@@ -29,10 +30,10 @@ STATIC_LEVELS = [
     7285, 7343.5, 7402, 7460.5, 7519, 7577.5, 7636, 7694.5, 7753, 7811.5,
     7870, 7928.5, 7987
 ]
-trader = TradovateTrader()
+trader1 = TradovateTrader(symbol="ESU5")
 strategy1 = Strategy(
     name="High PNL Strategy",
-    trader=trader,
+    trader=trader1,
     entry_offset=100,
     take_profit_offset=12800,
     stop_loss_offset=200,
@@ -43,9 +44,10 @@ strategy1 = Strategy(
 )
 strategy1.load_static_levels(STATIC_LEVELS)
 
+trader2 = TradovateTrader(symbol="MESU5")
 strategy2 = Strategy(
     name="High Win Rate Strategy",
-    trader=trader,
+    trader=trader2,
     entry_offset=10,
     take_profit_offset=25,
     stop_loss_offset=200,
@@ -55,19 +57,6 @@ strategy2 = Strategy(
     max_contracts_per_trade=1
 )
 strategy2.load_static_levels(STATIC_LEVELS)
-
-strategy3 = Strategy(
-    name="Balanced Strategy",
-    trader=trader,
-    entry_offset=100,
-    take_profit_offset=25600,
-    stop_loss_offset=200,
-    trail_trigger=2,
-    re_entry_distance=2,
-    max_open_trades=10,
-    max_contracts_per_trade=1
-)
-strategy3.load_static_levels(STATIC_LEVELS)
 
 last_price = None
 
@@ -81,7 +70,7 @@ class Signal(BaseModel):
 
 @app.post("/webhook")
 async def receive_signal(signal: Signal):
-    global last_price, strategy1, strategy2, strategy3
+    global last_price, strategy1, strategy2
     if strategy1 is None:
         logger.error("Strategy not initialized")
         raise HTTPException(status_code=500, detail="Strategy not initialized")
@@ -91,7 +80,9 @@ async def receive_signal(signal: Signal):
         last_price = signal.close
         return {"status": "success"}
     
-    strategy1.update(datetime.now(), last_price, signal.close, signal.high, signal.low)
+    asyncio.create_task(strategy1.update(datetime.now(), last_price, signal.close, signal.high, signal.low))
+    asyncio.create_task(strategy2.update(datetime.now(), last_price, signal.close, signal.high, signal.low))
+
     last_price = signal.close
     return {"status": "success"}
 
