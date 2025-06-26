@@ -5,7 +5,6 @@ import pandas as pd
 from datetime import datetime
 import uvicorn
 import logging
-import asyncio
 
 from lib.tradovate_api import TradovateTrader
 from strategy.strategy import Strategy
@@ -32,22 +31,8 @@ STATIC_LEVELS = [
 ]
 trader1 = TradovateTrader(symbol="ESU5")
 strategy1 = Strategy(
-    name="High PNL Strategy",
-    trader=trader1,
-    entry_offset=100,
-    take_profit_offset=12800,
-    stop_loss_offset=200,
-    trail_trigger=5,
-    re_entry_distance=1,
-    max_open_trades=10,
-    max_contracts_per_trade=1
-)
-strategy1.load_static_levels(STATIC_LEVELS)
-
-trader2 = TradovateTrader(symbol="MESU5")
-strategy2 = Strategy(
     name="High Win Rate Strategy",
-    trader=trader2,
+    trader=trader1,
     entry_offset=10,
     take_profit_offset=25,
     stop_loss_offset=200,
@@ -56,7 +41,21 @@ strategy2 = Strategy(
     max_open_trades=10,
     max_contracts_per_trade=1
 )
-strategy2.load_static_levels(STATIC_LEVELS)
+strategy1.load_static_levels(STATIC_LEVELS)
+
+# trader2 = TradovateTrader(symbol="MESU5")
+# strategy2 = Strategy(
+#     name="High PNL Strategy",
+#     trader=trader2,
+#     entry_offset=100,
+#     take_profit_offset=12800,
+#     stop_loss_offset=200,
+#     trail_trigger=5,
+#     re_entry_distance=1,
+#     max_open_trades=10,
+#     max_contracts_per_trade=1
+# )
+# strategy2.load_static_levels(STATIC_LEVELS)
 
 last_price = None
 
@@ -70,7 +69,7 @@ class Signal(BaseModel):
 
 @app.post("/webhook")
 async def receive_signal(signal: Signal):
-    global last_price, strategy1, strategy2
+    global last_price, strategy1
     if strategy1 is None:
         logger.error("Strategy not initialized")
         raise HTTPException(status_code=500, detail="Strategy not initialized")
@@ -80,11 +79,20 @@ async def receive_signal(signal: Signal):
         last_price = signal.close
         return {"status": "success"}
     
-    asyncio.create_task(strategy1.update(datetime.now(), last_price, signal.close, signal.high, signal.low))
-    asyncio.create_task(strategy2.update(datetime.now(), last_price, signal.close, signal.high, signal.low))
+    strategy1.update(datetime.now(), last_price, signal.close, signal.high, signal.low)
+    # asyncio.create_task(strategy2.update(datetime.now(), last_price, signal.close, signal.high, signal.low))
 
     last_price = signal.close
     return {"status": "success"}
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global strategy1
+    logger.info("Shutting down... running final strategy result.")
+    try:
+        strategy1.print_trade_stats()  # If it's an async method
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
     logger.info("Starting FastAPI application...")
