@@ -5,6 +5,7 @@ import pandas as pd
 from datetime import datetime
 import uvicorn
 import logging
+from contextlib import asynccontextmanager
 
 from lib.tradovate_api import TradovateTrader
 from strategy.strategy import Strategy
@@ -29,19 +30,8 @@ STATIC_LEVELS = [
     7285, 7343.5, 7402, 7460.5, 7519, 7577.5, 7636, 7694.5, 7753, 7811.5,
     7870, 7928.5, 7987
 ]
-trader1 = TradovateTrader(symbol="ESU5")
-strategy1 = Strategy(
-    name="High Win Rate Strategy",
-    trader=trader1,
-    entry_offset=10,
-    take_profit_offset=25,
-    stop_loss_offset=200,
-    trail_trigger=5,
-    re_entry_distance=1,
-    max_open_trades=10,
-    max_contracts_per_trade=1
-)
-strategy1.load_static_levels(STATIC_LEVELS)
+trader1 = None
+strategy1 = None
 
 # trader2 = TradovateTrader(symbol="MESU5")
 # strategy2 = Strategy(
@@ -59,7 +49,35 @@ strategy1.load_static_levels(STATIC_LEVELS)
 
 last_price = None
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global strategy1, trader1
+    # Startup
+    logger.info("Startup: initializing resources...")
+    trader1 = TradovateTrader(symbol="ESU5")
+    strategy1 = Strategy(
+        name="High Win Rate Strategy",
+        trader=trader1,
+        entry_offset=10,
+        take_profit_offset=25,
+        stop_loss_offset=200,
+        trail_trigger=5,
+        re_entry_distance=1,
+        max_open_trades=10,
+        max_contracts_per_trade=1
+    )
+    strategy1.load_static_levels(STATIC_LEVELS)
+
+    yield
+    # Shutdown
+    logger.info("Shutdown: running final strategy result.")
+    try:
+        strategy1.print_trade_stats()
+    except Exception as e:
+        logger.error(f"Error in shutdown: {e}")
+
+app = FastAPI(lifespan=lifespan)
 
 class Signal(BaseModel):
     open: float
@@ -85,15 +103,6 @@ async def receive_signal(signal: Signal):
     last_price = signal.close
     return {"status": "success"}
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    global strategy1
-    logger.info("Shutting down... running final strategy result.")
-    try:
-        strategy1.print_trade_stats()  # If it's an async method
-    except Exception as e:
-        print(f"Error: {e}")
-
 if __name__ == "__main__":
     logger.info("Starting FastAPI application...")
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)
