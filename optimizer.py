@@ -8,7 +8,7 @@ import pandas as pd
 import os
 
 
-OPTIMIZE_LONG = False
+OPTIMIZE_LONG = True
 
 # Delete previous optimizer result if it exists
 output_file = "strategy/long_result/optimizer_result.csv" if OPTIMIZE_LONG else "strategy/short_result/optimizer_result.csv"
@@ -35,14 +35,14 @@ with open("strategy/optimizer_config.json", "r") as f:
         for start_str, end_str in long_date_ranges:
             start = pd.to_datetime(start_str)
             end = pd.to_datetime(end_str)
-            long_dates = long_dates.union(pd.date_range(start=start, end=end, freq="30min"))
+            long_dates = long_dates.union(pd.date_range(start=start, end=end, freq="1min"))
     else:
         for start_str, end_str in short_date_ranges:
             start = pd.to_datetime(start_str)
             end = pd.to_datetime(end_str)
-            short_dates = short_dates.union(pd.date_range(start=start, end=end, freq="30min"))
+            short_dates = short_dates.union(pd.date_range(start=start, end=end, freq="1min"))
 
-    csv_file = "data/es-30m-cleaned.csv"
+    csv_file = "data/es-1m-cleaned.csv"
     data = pd.read_csv(csv_file, parse_dates=[0], index_col=0)
 
     for i, combo in enumerate(combinations):
