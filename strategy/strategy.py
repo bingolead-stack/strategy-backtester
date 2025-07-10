@@ -98,7 +98,7 @@ class Strategy:
             for level in self.static_levels:
                 entry_offset = self.entry_offset
                 
-                if self.price <= level + entry_offset < self.last_price and self.retrace_levels[self.static_levels.index(level) + self.re_entry_distance]:
+                if level < self.price <= level + entry_offset and self.retrace_levels[self.static_levels.index(level) + self.re_entry_distance]:
                     self.retrace_levels[self.static_levels.index(level) + self.re_entry_distance] = False
                     # Now the entry condition met. We can enter trade here.
                     for _ in range(self.max_contracts_per_trade):  # number of contracts to trade
@@ -139,7 +139,7 @@ class Strategy:
             for level in self.static_levels:
                 entry_offset = self.entry_offset
 
-                if self.price > level - entry_offset >= self.last_price and self.retrace_levels[self.static_levels.index(level) - self.re_entry_distance]:
+                if level > self.price > level - entry_offset and self.retrace_levels[self.static_levels.index(level) - self.re_entry_distance]:
                     self.retrace_levels[self.static_levels.index(level) - self.re_entry_distance] = False
 
                     # We can enter trade here.
