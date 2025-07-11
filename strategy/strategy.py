@@ -97,8 +97,13 @@ class Strategy:
         if max_open_trades > 0:  # can trade
             for level in self.static_levels:
                 entry_offset = self.entry_offset
-                
-                if level < self.price <= level + entry_offset and self.retrace_levels[self.static_levels.index(level) + self.re_entry_distance]:
+                if self.price <= level < self.last_price:  # Retrace level
+                    print(f"DEBUG: {self.name}: Price retraced to level {level} with price {self.price}.")
+                    self.retrace_levels[self.static_levels.index(level)] = True
+                elif self.price >= level > self.last_price:
+                    self.retrace_levels[self.static_levels.index(level)] = False
+
+                if self.price <= level + entry_offset < self.last_price and self.retrace_levels[self.static_levels.index(level) + self.re_entry_distance]:
                     self.retrace_levels[self.static_levels.index(level) + self.re_entry_distance] = False
                     # Now the entry condition met. We can enter trade here.
                     for _ in range(self.max_contracts_per_trade):  # number of contracts to trade
@@ -122,11 +127,6 @@ class Strategy:
                         print(f"{self.name}: Stop-Loss Level: {stop_level}")
                         max_open_trades -= 1
 
-                if self.price <= level < self.last_price:  # Retrace level
-                    print(f"DEBUG: {self.name}: Price retraced to level {level} with price {self.price}.")
-                    self.retrace_levels[self.static_levels.index(level)] = True
-                elif self.price >= level > self.last_price:
-                    self.retrace_levels[self.static_levels.index(level)] = False
         else:
             print(
                 f"DEBUG: {self.name}: Open trade = {self.open_trade_count}, max open trades = {self.max_open_trades}. No room left to trade. Skipping")
@@ -138,8 +138,13 @@ class Strategy:
         if max_open_trades > 0:  # can trade
             for level in self.static_levels:
                 entry_offset = self.entry_offset
-
-                if level > self.price > level - entry_offset and self.retrace_levels[self.static_levels.index(level) - self.re_entry_distance]:
+                if self.price >= level > self.last_price:  # Retrace level
+                    print(f"DEBUG: {self.name}: Price retraced to level {level} with price {self.price}.")
+                    self.retrace_levels[self.static_levels.index(level)] = True
+                elif self.price <= level < self.last_price:
+                    self.retrace_levels[self.static_levels.index(level)] = False
+                        
+                if self.price > level - entry_offset >= self.last_price and self.retrace_levels[self.static_levels.index(level) - self.re_entry_distance]:
                     self.retrace_levels[self.static_levels.index(level) - self.re_entry_distance] = False
 
                     # We can enter trade here.
@@ -161,13 +166,6 @@ class Strategy:
                             print(f"{self.name}: Stop-Loss Level: {stop_level}")
                             max_open_trades -= 1
 
-
-                if self.price >= level > self.last_price:  # Retrace level
-                    print(f"DEBUG: {self.name}: Price retraced to level {level} with price {self.price}.")
-                    self.retrace_levels[self.static_levels.index(level)] = True
-                elif self.price <= level < self.last_price:
-                    self.retrace_levels[self.static_levels.index(level)] = False
-                        
         else:
             print(f"DEBUG: {self.name}: Open trade = {self.open_trade_count}, max open trades = {self.max_open_trades}. No room left to trade. Skipping")
 
