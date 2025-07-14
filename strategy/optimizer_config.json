@@ -4,7 +4,7 @@
     "TAKE_PROFIT_OFFSET": [10, 15, 25, 35],
     "STOP_LOSS_OFFSET": [50, 75, 100],
     "TRAIL_TRIGGER": [10],
-    "RE_ENTRY_DISTANCE": [1, 2],
+    "RE_ENTRY_DISTANCE": [1],
     "MAX_OPEN_TRADES": [10],
     "MAX_CONTRACTS_PER_TRADE": [1]
   },
