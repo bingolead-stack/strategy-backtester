@@ -30,50 +30,56 @@ STATIC_LEVELS = [
     7285, 7343.5, 7402, 7460.5, 7519, 7577.5, 7636, 7694.5, 7753, 7811.5,
     7870, 7928.5, 7987
 ]
-trader1 = None
-strategy1 = None
-
-# trader2 = TradovateTrader(symbol="MESU5")
-# strategy2 = Strategy(
-#     name="High PNL Strategy",
-#     trader=trader2,
-#     entry_offset=100,
-#     take_profit_offset=12800,
-#     stop_loss_offset=200,
-#     trail_trigger=5,
-#     re_entry_distance=1,
-#     max_open_trades=10,
-#     max_contracts_per_trade=1
-# )
-# strategy2.load_static_levels(STATIC_LEVELS)
+swing_strategy = None
+swing_trader = None
+scalp_strategy = None
+scalp_trader = None
 
 last_price = None
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global strategy1, trader1
+    global swing_strategy, swing_trader, scalp_strategy, scalp_trader
     # Startup
     logger.info("Startup: initializing resources...")
-    trader1 = TradovateTrader(symbol="ESU5")
-    strategy1 = Strategy(
-        name="High Win Rate Strategy",
-        trader=trader1,
-        entry_offset=10,
-        take_profit_offset=25,
-        stop_loss_offset=200,
-        trail_trigger=5,
+    swing_trader = TradovateTrader(symbol="MESU5")
+    swing_strategy = Strategy(
+        name="Swing Strategy",
+        trader=swing_trader,
+        entry_offset=100,
+        take_profit_offset=500,
+        stop_loss_offset=150,
+        trail_trigger=10,
+        re_entry_distance=1,
+        max_open_trades=100,
+        max_contracts_per_trade=1
+    )
+    swing_strategy.load_static_levels(STATIC_LEVELS)
+
+    scalp_trader = TradovateTrader(symbol="ESU5")
+    scalp_strategy = Strategy(
+        name="Scalp Strategy",
+        trader=scalp_trader,
+        entry_offset=5,
+        take_profit_offset=35,
+        stop_loss_offset=100,
+        trail_trigger=10,
         re_entry_distance=1,
         max_open_trades=10,
         max_contracts_per_trade=1
     )
-    strategy1.load_static_levels(STATIC_LEVELS)
+    scalp_strategy.load_static_levels(STATIC_LEVELS)
 
     yield
     # Shutdown
     logger.info("Shutdown: running final strategy result.")
     try:
-        strategy1.print_trade_stats()
+        logger.info("====================Swing strategy result==========================")
+        swing_strategy.print_trade_stats()
+        logger.info("====================End of Swing==========================")
+        logger.info("====================Scalp strategy result==========================")
+        scalp_strategy.print_trade_stats()
+        logger.info("====================End of Scalp==========================")
     except Exception as e:
         logger.error(f"Error in shutdown: {e}")
 
@@ -87,8 +93,8 @@ class Signal(BaseModel):
 
 @app.post("/webhook")
 async def receive_signal(signal: Signal):
-    global last_price, strategy1
-    if strategy1 is None:
+    global last_price, swing_strategy, scalp_strategy
+    if swing_strategy is None or scalp_strategy is None:
         logger.error("Strategy not initialized")
         raise HTTPException(status_code=500, detail="Strategy not initialized")
 
@@ -97,8 +103,8 @@ async def receive_signal(signal: Signal):
         last_price = signal.close
         return {"status": "success"}
     
-    strategy1.update(datetime.now(), last_price, signal.close, signal.high, signal.low)
-    # asyncio.create_task(strategy2.update(datetime.now(), last_price, signal.close, signal.high, signal.low))
+    swing_strategy.update(datetime.now(), last_price, signal.close, signal.high, signal.low)
+    scalp_strategy.update(datetime.now(), last_price, signal.close, signal.high, signal.low)
 
     last_price = signal.close
     return {"status": "success"}
