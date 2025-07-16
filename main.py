@@ -7,6 +7,7 @@ import uvicorn
 import logging
 from contextlib import asynccontextmanager
 
+from lib.token_manager import TokenManager
 from lib.tradovate_api import TradovateTrader
 from strategy.strategy import Strategy
 
@@ -30,6 +31,7 @@ STATIC_LEVELS = [
     7285, 7343.5, 7402, 7460.5, 7519, 7577.5, 7636, 7694.5, 7753, 7811.5,
     7870, 7928.5, 7987
 ]
+token_manager = None
 swing_strategy = None
 swing_trader = None
 scalp_strategy = None
@@ -39,10 +41,13 @@ last_price = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global swing_strategy, swing_trader, scalp_strategy, scalp_trader
+    global swing_strategy, swing_trader, scalp_strategy, scalp_trader, token_manager
     # Startup
     logger.info("Startup: initializing resources...")
-    swing_trader = TradovateTrader(symbol="MESU5")
+
+    token_manager = TokenManager()
+    token_manager.start()
+    swing_trader = TradovateTrader(symbol="MESU5", token_manager=token_manager)
     swing_strategy = Strategy(
         name="Swing Strategy",
         trader=swing_trader,
@@ -56,7 +61,7 @@ async def lifespan(app: FastAPI):
     )
     swing_strategy.load_static_levels(STATIC_LEVELS)
 
-    scalp_trader = TradovateTrader(symbol="ESU5")
+    scalp_trader = TradovateTrader(symbol="ESU5", token_manager=token_manager)
     scalp_strategy = Strategy(
         name="Scalp Strategy",
         trader=scalp_trader,

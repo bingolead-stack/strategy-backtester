@@ -7,13 +7,12 @@ from lib.token_manager import TokenManager
 load_dotenv()
 
 class TradovateTrader:
-    def __init__(self, symbol):
+    def __init__(self, symbol, token_manager):
         self.account_id = None
         self.symbol = symbol
         self.username = os.getenv("TRADOVATE_USERNAME")
         self.api_url = os.getenv("TRADOVATE_API_URL")
-        self.token_manager = TokenManager()
-        self.token_manager.start()
+        self.token_manager = token_manager
 
     async def ensure_account_id(self):
         if not self.account_id:
