@@ -119,12 +119,13 @@ class Strategy:
                         self.open_trade_list.append(trade)
                         self.open_trade_count += 1
                         self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
-                        if self.trader is not None:
-                            self.trader.enter_position(quantity=1, is_long=True)
 
                         print(
                             f"{self.name}: [{self.index}] BUY ORDER SENT at {entry_price} (Retraced to static level {level})")
                         print(f"{self.name}: Stop-Loss Level: {stop_level}")
+                        
+                        if self.trader is not None:
+                            self.trader.enter_position(quantity=1, is_long=True)
                         max_open_trades -= 1
 
         else:

@@ -103,7 +103,7 @@ async def receive_signal(signal: Signal):
         logger.error("Strategy not initialized")
         raise HTTPException(status_code=500, detail="Strategy not initialized")
 
-    logger.info(f"Received signal: {signal}")
+    # logger.info(f"Received signal: {signal}")
     if last_price is None:
         last_price = signal.close
         return {"status": "success"}
