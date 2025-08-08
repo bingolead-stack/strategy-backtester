@@ -108,8 +108,8 @@ async def receive_signal(signal: Signal):
         last_price = signal.close
         return {"status": "success"}
     
-    swing_strategy.update(datetime.now(), last_price, signal.close, signal.high, signal.low)
-    scalp_strategy.update(datetime.now(), last_price, signal.close, signal.high, signal.low)
+    swing_strategy.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
+    scalp_strategy.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
 
     last_price = signal.close
     return {"status": "success"}
