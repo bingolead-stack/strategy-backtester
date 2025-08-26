@@ -1,11 +1,11 @@
 {
   "param_grid": {
-    "ENTRY_OFFSET": [25, 50, 75, 100],
-    "TAKE_PROFIT_OFFSET": [500, 1000, 1500],
-    "STOP_LOSS_OFFSET": [75, 100, 125, 150],
-    "TRAIL_TRIGGER": [5, 10],
+    "ENTRY_OFFSET": [10, 15, 20, 25],
+    "TAKE_PROFIT_OFFSET": [20, 30, 50, 100, 600, 800, 1000, 1500],
+    "STOP_LOSS_OFFSET": [75, 100, 125, 150, 200],
+    "TRAIL_TRIGGER": [3, 5, 7, 10, 12, 15],
     "RE_ENTRY_DISTANCE": [1, 2],
-    "MAX_OPEN_TRADES": [100],
+    "MAX_OPEN_TRADES": [10, 100],
     "MAX_CONTRACTS_PER_TRADE": [1]
   },
   "long_date_ranges": [
