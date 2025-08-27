@@ -57,7 +57,8 @@ async def lifespan(app: FastAPI):
         trail_trigger=10,
         re_entry_distance=1,
         max_open_trades=100,
-        max_contracts_per_trade=1
+        max_contracts_per_trade=1,
+        symbol_size=5
     )
     swing_strategy.load_static_levels(STATIC_LEVELS)
 
@@ -71,7 +72,8 @@ async def lifespan(app: FastAPI):
         trail_trigger=10,
         re_entry_distance=1,
         max_open_trades=10,
-        max_contracts_per_trade=1
+        max_contracts_per_trade=1,
+        symbol_size=50
     )
     scalp_strategy.load_static_levels(STATIC_LEVELS)
 

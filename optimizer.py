@@ -59,7 +59,8 @@ with open("strategy/optimizer_config.json", "r") as f:
             max_open_trades=MAX_OPEN_TRADES,
             max_contracts_per_trade=MAX_CONTRACTS_PER_TRADE,
             long_dates=long_dates,
-            short_dates=short_dates
+            short_dates=short_dates,
+            symbol_size=50
         )
 
         strategy.load_static_levels(STATIC_LEVELS)

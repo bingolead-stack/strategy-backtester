@@ -45,7 +45,8 @@ with open("strategy/backtest_config.json", "r") as f:
         max_open_trades=strategy_config["max_open_trades"],
         max_contracts_per_trade=strategy_config["max_contracts_per_trade"],
         long_dates=long_dates,
-        short_dates=short_dates
+        short_dates=short_dates,
+        symbol_size=50
     )
 
     strategy.load_static_levels(STATIC_LEVELS)
