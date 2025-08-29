@@ -7,7 +7,7 @@ from lib.tradovate_api import TradovateTrader
 class Strategy:
 
     def __init__(self, name: str, trader:TradovateTrader, entry_offset, take_profit_offset, stop_loss_offset, trail_trigger, re_entry_distance,
-                 max_open_trades, max_contracts_per_trade, long_dates = None, short_dates = None):
+                 max_open_trades, max_contracts_per_trade, long_dates = None, short_dates = None, symbol_size=50):
         """
         :param entry_offset: offset above signal to enter trade
         :param take_profit_offset: offset number of ticks above signal to close for profit
@@ -30,6 +30,7 @@ class Strategy:
         self.re_entry_distance = re_entry_distance
         self.max_open_trades = max_open_trades
         self.max_contracts_per_trade = max_contracts_per_trade
+        self.symbol_size = symbol_size
 
         # init stat data structs
         self.position = None
@@ -165,6 +166,8 @@ class Strategy:
 
                             print(f"{self.name}: [{self.index}] SELL ORDER SENT at {entry_price} (Retraced up to static level {level})")
                             print(f"{self.name}: Stop-Loss Level: {stop_level}")
+                            if self.trader is not None:
+                                self.trader.enter_position(quantity=1, is_long=False)
                             max_open_trades -= 1
 
         else:
@@ -199,7 +202,7 @@ class Strategy:
                     if self.price <= stop_level or (trailing_stop is not None and self.price <= trailing_stop) or (self.price >= take_profit_level):
                         # trade_history.append((index, 'SELL', price))
 
-                        pnl = (self.price - entry_price) * 50  # mult be size
+                        pnl = (self.price - entry_price) * self.symbol_size  # mult be size
                         self.current_cash_value += pnl
                         # add tied up margin to the current cash
                         self.current_cash_value += entry_price * 0.1 * 4 * 12.5
@@ -240,7 +243,7 @@ class Strategy:
                         self.open_trade_list[i][3] = trailing_stop
 
                     if self.price >= stop_level or (trailing_stop is not None and self.price >= trailing_stop) or (self.price <= take_profit_level):
-                        pnl = (entry_price - self.price) * 50
+                        pnl = (entry_price - self.price) * self.symbol_size
                         self.current_cash_value += pnl
                         self.current_cash_value += entry_price * 0.1 * 4 * 12.5
                         self.total_pnl += pnl
@@ -249,7 +252,10 @@ class Strategy:
 
                         self.open_trade_count -= 1
                         trades_to_remove.append([trade_time, entry_price, stop_level, trailing_stop, traded_level, take_profit_level])
-
+                        
+                        if self.trader is not None:
+                            self.trader.enter_position(quantity=1, is_long=True)
+                        
                         print(
                             f"[{self.index}] COVER ORDER EXECUTED at {self.price} (stop level hit {stop_level} or trailing stop hit at {trailing_stop})\n"
                             f"\t\t Profit/Loss: {pnl:.2f}")
@@ -276,6 +282,7 @@ class Strategy:
             # elif index in self.short_dates:
             #     self.run_sell_strategy()
             self.run_buy_strategy()
+            self.run_sell_strategy()
             self.check_trade_to_remove()
 
     def print_trade_stats(self):
