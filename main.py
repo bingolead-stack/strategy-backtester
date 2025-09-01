@@ -65,7 +65,8 @@ async def lifespan(app: FastAPI):
         re_entry_distance=1,
         max_open_trades=100,
         max_contracts_per_trade=1,
-        symbol_size=5
+        symbol_size=5,
+        is_trading_long=True
     )
     swing_strategy_short = Strategy(
         name="Swing Strategy",
@@ -77,7 +78,8 @@ async def lifespan(app: FastAPI):
         re_entry_distance=1,
         max_open_trades=10,
         max_contracts_per_trade=1,
-        symbol_size=5
+        symbol_size=5,
+        is_trading_long=False
     )
     swing_strategy_long.load_static_levels(STATIC_LEVELS)
     swing_strategy_short.load_static_levels(STATIC_LEVELS)
@@ -93,7 +95,8 @@ async def lifespan(app: FastAPI):
         re_entry_distance=1,
         max_open_trades=10,
         max_contracts_per_trade=1,
-        symbol_size=50
+        symbol_size=50,
+        is_trading_long=True
     )
     scalp_strategy_short = Strategy(
         name="Scalp Strategy",
@@ -105,7 +108,8 @@ async def lifespan(app: FastAPI):
         re_entry_distance=1,
         max_open_trades=10,
         max_contracts_per_trade=1,
-        symbol_size=50
+        symbol_size=50,
+        is_trading_long=False
     )
     scalp_strategy_long.load_static_levels(STATIC_LEVELS)
     scalp_strategy_short.load_static_levels(STATIC_LEVELS)

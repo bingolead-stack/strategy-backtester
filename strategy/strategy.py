@@ -7,7 +7,7 @@ from lib.tradovate_api import TradovateTrader
 class Strategy:
 
     def __init__(self, name: str, trader:TradovateTrader, entry_offset, take_profit_offset, stop_loss_offset, trail_trigger, re_entry_distance,
-                 max_open_trades, max_contracts_per_trade, long_dates = None, short_dates = None, symbol_size=50):
+                 max_open_trades, max_contracts_per_trade, long_dates = None, short_dates = None, symbol_size=50, is_trading_long = True):
         """
         :param entry_offset: offset above signal to enter trade
         :param take_profit_offset: offset number of ticks above signal to close for profit
@@ -62,6 +62,7 @@ class Strategy:
         # daterange stuff
         self.long_dates = long_dates
         self.short_dates = short_dates
+        self.is_trading_long = is_trading_long
 
     def load_static_levels(self, static_levels: List[int]):
         self.static_levels = sorted(static_levels)
@@ -281,8 +282,11 @@ class Strategy:
             #     self.run_buy_strategy()
             # elif index in self.short_dates:
             #     self.run_sell_strategy()
-            self.run_buy_strategy()
-            self.run_sell_strategy()
+            if self.is_trading_long:
+                self.run_buy_strategy()
+            else:
+                self.run_sell_strategy()
+            
             self.check_trade_to_remove()
 
     def print_trade_stats(self):
