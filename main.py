@@ -6,6 +6,10 @@ from datetime import datetime
 import uvicorn
 import logging
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 from lib.token_manager import TokenManager
 from lib.tradovate_api import TradovateTrader
@@ -15,6 +19,7 @@ from strategy.strategy import Strategy
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+IS_TRADING_LONG = os.getenv("IS_LONG_ONLY_TRADE")
 STATIC_LEVELS = [
     31, 89.5, 148, 206.5, 265, 323.5, 382, 440.5, 499, 557.5, 616, 674.5, 733,
     791.5, 850, 908.5, 967, 1025.5, 1084, 1142.5, 1201, 1259.5, 1318, 1376.5,
@@ -32,23 +37,25 @@ STATIC_LEVELS = [
     7870, 7928.5, 7987
 ]
 token_manager = None
-swing_strategy = None
+swing_strategy_long = None
+swing_strategy_short = None
 swing_trader = None
-scalp_strategy = None
+scalp_strategy_long = None
+scalp_strategy_short = None
 scalp_trader = None
 
 last_price = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global swing_strategy, swing_trader, scalp_strategy, scalp_trader, token_manager
+    global swing_strategy_long, swing_strategy_short, swing_trader, scalp_strategy_long, scalp_strategy_short, scalp_trader, token_manager
     # Startup
     logger.info("Startup: initializing resources...")
 
     token_manager = TokenManager()
     token_manager.start()
     swing_trader = TradovateTrader(symbol="MESU5", token_manager=token_manager)
-    swing_strategy = Strategy(
+    swing_strategy_long = Strategy(
         name="Swing Strategy",
         trader=swing_trader,
         entry_offset=100,
@@ -60,10 +67,23 @@ async def lifespan(app: FastAPI):
         max_contracts_per_trade=1,
         symbol_size=5
     )
-    swing_strategy.load_static_levels(STATIC_LEVELS)
+    swing_strategy_short = Strategy(
+        name="Swing Strategy",
+        trader=swing_trader,
+        entry_offset=15,
+        take_profit_offset=800,
+        stop_loss_offset=200,
+        trail_trigger=10,
+        re_entry_distance=1,
+        max_open_trades=10,
+        max_contracts_per_trade=1,
+        symbol_size=5
+    )
+    swing_strategy_long.load_static_levels(STATIC_LEVELS)
+    swing_strategy_short.load_static_levels(STATIC_LEVELS)
 
     scalp_trader = TradovateTrader(symbol="ESU5", token_manager=token_manager)
-    scalp_strategy = Strategy(
+    scalp_strategy_long = Strategy(
         name="Scalp Strategy",
         trader=scalp_trader,
         entry_offset=5,
@@ -75,18 +95,40 @@ async def lifespan(app: FastAPI):
         max_contracts_per_trade=1,
         symbol_size=50
     )
-    scalp_strategy.load_static_levels(STATIC_LEVELS)
+    scalp_strategy_short = Strategy(
+        name="Scalp Strategy",
+        trader=scalp_trader,
+        entry_offset=10,
+        take_profit_offset=20,
+        stop_loss_offset=150,
+        trail_trigger=10,
+        re_entry_distance=1,
+        max_open_trades=10,
+        max_contracts_per_trade=1,
+        symbol_size=50
+    )
+    scalp_strategy_long.load_static_levels(STATIC_LEVELS)
+    scalp_strategy_short.load_static_levels(STATIC_LEVELS)
 
     yield
     # Shutdown
     logger.info("Shutdown: running final strategy result.")
     try:
-        logger.info("====================Swing strategy result==========================")
-        swing_strategy.print_trade_stats()
-        logger.info("====================End of Swing==========================")
-        logger.info("====================Scalp strategy result==========================")
-        scalp_strategy.print_trade_stats()
-        logger.info("====================End of Scalp==========================")
+        if IS_TRADING_LONG:
+            logger.info("====================Swing strategy result==========================")
+            swing_strategy_long.print_trade_stats()
+            logger.info("====================End of Swing==========================")
+            logger.info("====================Scalp strategy result==========================")
+            scalp_strategy_long.print_trade_stats()
+            logger.info("====================End of Scalp==========================")
+
+        else:
+            logger.info("====================Swing strategy result==========================")
+            swing_strategy_short.print_trade_stats()
+            logger.info("====================End of Swing==========================")
+            logger.info("====================Scalp strategy result==========================")
+            scalp_strategy_short.print_trade_stats()
+            logger.info("====================End of Scalp==========================")
     except Exception as e:
         logger.error(f"Error in shutdown: {e}")
 
@@ -100,8 +142,8 @@ class Signal(BaseModel):
 
 @app.post("/webhook")
 async def receive_signal(signal: Signal):
-    global last_price, swing_strategy, scalp_strategy
-    if swing_strategy is None or scalp_strategy is None:
+    global last_price, swing_strategy_long, scalp_strategy_long, swing_strategy_short, scalp_strategy_short
+    if swing_strategy_long is None or scalp_strategy_long is None or swing_strategy_short is None or scalp_strategy_short is None:
         logger.error("Strategy not initialized")
         raise HTTPException(status_code=500, detail="Strategy not initialized")
 
@@ -110,8 +152,12 @@ async def receive_signal(signal: Signal):
         last_price = signal.close
         return {"status": "success"}
     
-    swing_strategy.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
-    scalp_strategy.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
+    if IS_TRADING_LONG:
+        swing_strategy_long.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
+        scalp_strategy_long.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
+    else:
+        swing_strategy_short.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
+        scalp_strategy_short.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
 
     last_price = signal.close
     return {"status": "success"}

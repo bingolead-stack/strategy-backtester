@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-OPTIMIZE_LONG = True
+OPTIMIZE_LONG = False
 # Load your CSV
 input_file = "long_result/optimizer_result.csv" if OPTIMIZE_LONG else "short_result/optimizer_result.csv"
 output_file = 'long_result/optimizer_final_result.csv' if OPTIMIZE_LONG else 'short_result/optimizer_final_result.csv'
