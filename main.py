@@ -54,7 +54,7 @@ async def lifespan(app: FastAPI):
 
     token_manager = TokenManager()
     token_manager.start()
-    swing_trader = TradovateTrader(symbol="MESU5", token_manager=token_manager)
+    swing_trader = TradovateTrader(symbol="MESZ5", token_manager=token_manager)
     swing_strategy_long = Strategy(
         name="Swing Strategy",
         trader=swing_trader,
@@ -84,7 +84,7 @@ async def lifespan(app: FastAPI):
     swing_strategy_long.load_static_levels(STATIC_LEVELS)
     swing_strategy_short.load_static_levels(STATIC_LEVELS)
 
-    scalp_trader = TradovateTrader(symbol="ESU5", token_manager=token_manager)
+    scalp_trader = TradovateTrader(symbol="ESZ5", token_manager=token_manager)
     scalp_strategy_long = Strategy(
         name="Scalp Strategy",
         trader=scalp_trader,
