@@ -13,6 +13,7 @@ load_dotenv()
 
 from lib.token_manager import TokenManager
 from lib.tradovate_api import TradovateTrader
+from lib.state_persistence import StatePersistence
 from strategy.strategy import Strategy
 
 # Set up logging
@@ -43,20 +44,27 @@ swing_trader = None
 scalp_strategy_long = None
 scalp_strategy_short = None
 scalp_trader = None
+state_persistence = None
 
 last_price = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global swing_strategy_long, swing_strategy_short, swing_trader, scalp_strategy_long, scalp_strategy_short, scalp_trader, token_manager
+    global swing_strategy_long, swing_strategy_short, swing_trader, scalp_strategy_long, scalp_strategy_short, scalp_trader, token_manager, state_persistence
     # Startup
     logger.info("Startup: initializing resources...")
+
+    # Initialize state persistence
+    state_persistence = StatePersistence(db_path="trading_bot_state.db")
+    logger.info("State persistence initialized")
 
     token_manager = TokenManager()
     token_manager.start()
     swing_trader = TradovateTrader(symbol="MESZ5", token_manager=token_manager)
+    
+    # Create strategies with persistence enabled
     swing_strategy_long = Strategy(
-        name="Swing Strategy",
+        name="Swing Long Strategy",
         trader=swing_trader,
         entry_offset=100,
         take_profit_offset=500,
@@ -66,10 +74,12 @@ async def lifespan(app: FastAPI):
         max_open_trades=100,
         max_contracts_per_trade=1,
         symbol_size=5,
-        is_trading_long=True
+        is_trading_long=True,
+        persistence=state_persistence,
+        auto_save=True
     )
     swing_strategy_short = Strategy(
-        name="Swing Strategy",
+        name="Swing Short Strategy",
         trader=swing_trader,
         entry_offset=15,
         take_profit_offset=800,
@@ -79,14 +89,30 @@ async def lifespan(app: FastAPI):
         max_open_trades=10,
         max_contracts_per_trade=1,
         symbol_size=5,
-        is_trading_long=False
+        is_trading_long=False,
+        persistence=state_persistence,
+        auto_save=True
     )
+    
+    # Load static levels first
     swing_strategy_long.load_static_levels(STATIC_LEVELS)
     swing_strategy_short.load_static_levels(STATIC_LEVELS)
+    
+    # Try to load saved state
+    logger.info("Attempting to load saved state...")
+    if swing_strategy_long.load_state():
+        logger.info("Swing Long Strategy: Restored from saved state")
+    else:
+        logger.info("Swing Long Strategy: Starting fresh")
+    
+    if swing_strategy_short.load_state():
+        logger.info("Swing Short Strategy: Restored from saved state")
+    else:
+        logger.info("Swing Short Strategy: Starting fresh")
 
     scalp_trader = TradovateTrader(symbol="ESZ5", token_manager=token_manager)
     scalp_strategy_long = Strategy(
-        name="Scalp Strategy",
+        name="Scalp Long Strategy",
         trader=scalp_trader,
         entry_offset=5,
         take_profit_offset=35,
@@ -96,10 +122,12 @@ async def lifespan(app: FastAPI):
         max_open_trades=10,
         max_contracts_per_trade=1,
         symbol_size=50,
-        is_trading_long=True
+        is_trading_long=True,
+        persistence=state_persistence,
+        auto_save=True
     )
     scalp_strategy_short = Strategy(
-        name="Scalp Strategy",
+        name="Scalp Short Strategy",
         trader=scalp_trader,
         entry_offset=10,
         take_profit_offset=20,
@@ -109,10 +137,25 @@ async def lifespan(app: FastAPI):
         max_open_trades=10,
         max_contracts_per_trade=1,
         symbol_size=50,
-        is_trading_long=False
+        is_trading_long=False,
+        persistence=state_persistence,
+        auto_save=True
     )
+    
+    # Load static levels first
     scalp_strategy_long.load_static_levels(STATIC_LEVELS)
     scalp_strategy_short.load_static_levels(STATIC_LEVELS)
+    
+    # Try to load saved state
+    if scalp_strategy_long.load_state():
+        logger.info("Scalp Long Strategy: Restored from saved state")
+    else:
+        logger.info("Scalp Long Strategy: Starting fresh")
+    
+    if scalp_strategy_short.load_state():
+        logger.info("Scalp Short Strategy: Restored from saved state")
+    else:
+        logger.info("Scalp Short Strategy: Starting fresh")
 
     yield
     # Shutdown

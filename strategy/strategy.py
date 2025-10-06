@@ -1,13 +1,15 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from matplotlib import pyplot as plt
 
 from lib.tradovate_api import TradovateTrader
+from lib.state_persistence import StatePersistence
 
 class Strategy:
 
     def __init__(self, name: str, trader:TradovateTrader, entry_offset, take_profit_offset, stop_loss_offset, trail_trigger, re_entry_distance,
-                 max_open_trades, max_contracts_per_trade, long_dates = None, short_dates = None, symbol_size=50, is_trading_long = True):
+                 max_open_trades, max_contracts_per_trade, long_dates = None, short_dates = None, symbol_size=50, is_trading_long = True, 
+                 persistence: Optional[StatePersistence] = None, auto_save: bool = True):
         """
         :param entry_offset: offset above signal to enter trade
         :param take_profit_offset: offset number of ticks above signal to close for profit
@@ -16,6 +18,8 @@ class Strategy:
         :param re_entry_distance: Distance beyond the retracement before we will re-enter our trade
         :param starting_cash_value: Initial cash available to this strategy
         :param max_open_trades: Maximum number of trades we can hold at any time
+        :param persistence: StatePersistence instance for saving/loading state
+        :param auto_save: Whether to automatically save state after each update
 
         """
         # Init strategy values
@@ -63,10 +67,114 @@ class Strategy:
         self.long_dates = long_dates
         self.short_dates = short_dates
         self.is_trading_long = is_trading_long
+        
+        # persistence
+        self.persistence = persistence
+        self.auto_save = auto_save
 
     def load_static_levels(self, static_levels: List[int]):
         self.static_levels = sorted(static_levels)
         self.retrace_levels = {i: False for i in range(len(static_levels))}
+    
+    def get_state(self) -> dict:
+        """
+        Get current strategy state as a dictionary for persistence.
+        
+        Returns:
+            Dictionary containing all strategy state
+        """
+        return {
+            'current_cash_value': self.current_cash_value,
+            'open_trade_count': self.open_trade_count,
+            'total_pnl': self.total_pnl,
+            'price': self.price,
+            'last_price': self.last_price,
+            'high_price': self.high_price,
+            'low_price': self.low_price,
+            'index': str(self.index) if self.index else None,
+            'winrate': self.winrate,
+            'avg_winner': self.avgWinner,
+            'avg_loser': self.avgLoser,
+            'total_trade': self.total_trade,
+            'reward_to_risk': self.reward_to_risk,
+            'max_losing_streak': self.max_losing_streak,
+            'trade_history': self.trade_history,
+            'open_trade_list': self.open_trade_list,
+            'retrace_levels': self.retrace_levels,
+            'cumulative_pnl': self.cumulative_pnl,
+            'static_levels': self.static_levels
+        }
+    
+    def set_state(self, state: dict):
+        """
+        Restore strategy state from a dictionary.
+        
+        Args:
+            state: Dictionary containing strategy state
+        """
+        self.current_cash_value = state.get('current_cash_value', 0)
+        self.open_trade_count = state.get('open_trade_count', 0)
+        self.total_pnl = state.get('total_pnl', 0)
+        self.price = state.get('price')
+        self.last_price = state.get('last_price')
+        self.high_price = state.get('high_price')
+        self.low_price = state.get('low_price')
+        
+        # Handle index - it might be stored as string in DB
+        index_val = state.get('index')
+        if index_val:
+            try:
+                self.index = datetime.fromisoformat(str(index_val))
+            except:
+                self.index = index_val
+        else:
+            self.index = None
+        
+        self.winrate = state.get('winrate', 0)
+        self.avgWinner = state.get('avg_winner', 0)
+        self.avgLoser = state.get('avg_loser', 0)
+        self.total_trade = state.get('total_trade', 0)
+        self.reward_to_risk = state.get('reward_to_risk', 0)
+        self.max_losing_streak = state.get('max_losing_streak', 0)
+        
+        self.trade_history = state.get('trade_history', [])
+        self.open_trade_list = state.get('open_trade_list', [])
+        self.retrace_levels = state.get('retrace_levels', {})
+        self.cumulative_pnl = state.get('cumulative_pnl', [])
+        
+        # Static levels should already be loaded via load_static_levels()
+        # but can restore from state if needed
+        if state.get('static_levels') and not self.static_levels:
+            self.static_levels = state['static_levels']
+    
+    def save_state(self):
+        """Save current strategy state to database if persistence is enabled."""
+        if self.persistence and self.auto_save:
+            try:
+                self.persistence.save_strategy_state(self.name, self.get_state())
+            except Exception as e:
+                print(f"Error saving state for {self.name}: {e}")
+    
+    def load_state(self) -> bool:
+        """
+        Load strategy state from database if available.
+        
+        Returns:
+            True if state was loaded, False otherwise
+        """
+        if self.persistence:
+            try:
+                state = self.persistence.load_strategy_state(self.name)
+                if state:
+                    self.set_state(state)
+                    print(f"Loaded saved state for {self.name}")
+                    print(f"  - Open trades: {self.open_trade_count}")
+                    print(f"  - Total PnL: ${self.total_pnl:.2f}")
+                    print(f"  - Total trades: {self.total_trade}")
+                    return True
+            except Exception as e:
+                print(f"Error loading state for {self.name}: {e}")
+        return False
 
     def calculate_max_open_trades(self, price: float):
         """
@@ -288,6 +396,9 @@ class Strategy:
                 self.run_sell_strategy()
             
             self.check_trade_to_remove()
+            
+            # Save state after each update
+            self.save_state()
 
     def print_trade_stats(self):
         # Print Trade Summary

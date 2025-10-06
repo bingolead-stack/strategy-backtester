@@ -1,16 +1,53 @@
-# Ignore Python cache files
+# Python
 __pycache__/
 *.py[cod]
-*.swp
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Ignore environment files
-.env
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
-# Ignore logs
-logs/
+# Environment variables
+.env
+.env.local
+.venv
+# Database files (state persistence)
+trading_bot_state.db
+test_state.db
+*.db
+
+# Logs
 *.log
 
-.venv
-test.py
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+test_results/
+*.coverage
+htmlcov/
