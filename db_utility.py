@@ -67,9 +67,13 @@ def show_strategy_state(db_path: str, strategy_name: str):
         print("  No trade history")
     
     print(f"\n--- Retrace Levels ---")
-    retraced_count = sum(1 for v in state['retrace_levels'].values() if v)
+    down_count = sum(1 for v in state['retrace_levels'].values() if v == 'down')
+    up_count = sum(1 for v in state['retrace_levels'].values() if v == 'up')
+    none_count = sum(1 for v in state['retrace_levels'].values() if v is None)
     print(f"  Total levels: {len(state['retrace_levels'])}")
-    print(f"  Currently retraced: {retraced_count}")
+    print(f"  Crossed DOWN: {down_count}")
+    print(f"  Crossed UP: {up_count}")
+    print(f"  Not crossed: {none_count}")
     
     if state['static_levels']:
         print(f"\n--- Static Levels ---")

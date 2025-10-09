@@ -48,7 +48,7 @@ def test_basic_persistence():
             [datetime.now(), 5800.0, 5750.0, None, 5764.0, 5900.0],
             [datetime.now(), 5810.0, 5760.0, None, 5764.0, 5910.0],
         ],
-        'retrace_levels': {0: False, 1: True, 2: False},
+        'retrace_levels': {0: None, 1: 'down', 2: 'up'},
         'cumulative_pnl': [100.0, 250.0, 350.50],
         'static_levels': [5764.0, 5822.5, 5881.0]
     }
@@ -95,7 +95,7 @@ def test_multiple_strategies():
         'max_losing_streak': 1,
         'trade_history': [(datetime.now(), 'BUY', 5800.0, 0)],
         'open_trade_list': [[datetime.now(), 5800.0, 5750.0, None, 5764.0, 5900.0]],
-        'retrace_levels': {0: True},
+        'retrace_levels': {0: 'down'},
         'cumulative_pnl': [100.0],
         'static_levels': [5764.0]
     }
@@ -122,7 +122,7 @@ def test_multiple_strategies():
             [datetime.now(), 5860.0, 5910.0, None, 5881.0, 5810.0],
             [datetime.now(), 5870.0, 5920.0, None, 5881.0, 5820.0],
         ],
-        'retrace_levels': {0: False, 1: True},
+        'retrace_levels': {0: None, 1: 'up'},
         'cumulative_pnl': [200.0, 500.0],
         'static_levels': [5764.0, 5822.5]
     }

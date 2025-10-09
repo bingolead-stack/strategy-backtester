@@ -74,7 +74,8 @@ class Strategy:
 
     def load_static_levels(self, static_levels: List[int]):
         self.static_levels = sorted(static_levels)
-        self.retrace_levels = {i: False for i in range(len(static_levels))}
+        # Store direction of level cross: 'up', 'down', or None
+        self.retrace_levels = {i: None for i in range(len(static_levels))}
     
     def get_state(self) -> dict:
         """
@@ -207,14 +208,21 @@ class Strategy:
         if max_open_trades > 0:  # can trade
             for level in self.static_levels:
                 entry_offset = self.entry_offset
-                if self.price <= level < self.high_price:  # Retrace level
-                    print(f"DEBUG: {self.name}: Price retraced to level {level} with price {self.price}.")
-                    self.retrace_levels[self.static_levels.index(level)] = True
-                elif self.price >= level > self.low_price:
-                    self.retrace_levels[self.static_levels.index(level)] = False
+                level_idx = self.static_levels.index(level)
+                
+                # Track direction of level cross
+                if self.price <= level < self.high_price:  # Price crossed DOWN through level
+                    print(f"DEBUG: {self.name}: Price crossed DOWN to level {level} with price {self.price}.")
+                    self.retrace_levels[level_idx] = 'down'
+                elif self.price >= level > self.low_price:  # Price crossed UP through level
+                    self.retrace_levels[level_idx] = 'up'
 
-                if self.price <= level + entry_offset < self.last_price and self.retrace_levels[self.static_levels.index(level) + self.re_entry_distance]:
-                    self.retrace_levels[self.static_levels.index(level) + self.re_entry_distance] = False
+                # For long strategy, enter when price crosses up after a down retrace
+                re_entry_idx = level_idx + self.re_entry_distance
+                if (self.price <= level + entry_offset < self.last_price and 
+                    re_entry_idx in self.retrace_levels and
+                    self.retrace_levels[re_entry_idx] == 'down'):
+                    self.retrace_levels[re_entry_idx] = None  # Clear the retrace flag
                     # Now the entry condition met. We can enter trade here.
                     for _ in range(self.max_contracts_per_trade):  # number of contracts to trade
                         entry_price = self.price
@@ -249,14 +257,21 @@ class Strategy:
         if max_open_trades > 0:  # can trade
             for level in self.static_levels:
                 entry_offset = self.entry_offset
-                if self.price >= level > self.low_price:  # Retrace level
-                    print(f"DEBUG: {self.name}: Price retraced to level {level} with price {self.price}.")
-                    self.retrace_levels[self.static_levels.index(level)] = True
-                elif self.price <= level < self.high_price:
-                    self.retrace_levels[self.static_levels.index(level)] = False
-                        
-                if self.price > level - entry_offset >= self.last_price and self.retrace_levels[self.static_levels.index(level) - self.re_entry_distance]:
-                    self.retrace_levels[self.static_levels.index(level) - self.re_entry_distance] = False
+                level_idx = self.static_levels.index(level)
+                
+                # Track direction of level cross
+                if self.price >= level > self.low_price:  # Price crossed UP through level
+                    print(f"DEBUG: {self.name}: Price crossed UP to level {level} with price {self.price}.")
+                    self.retrace_levels[level_idx] = 'up'
+                elif self.price <= level < self.high_price:  # Price crossed DOWN through level
+                    self.retrace_levels[level_idx] = 'down'
+                
+                # For short strategy, enter when price crosses down after an up retrace
+                re_entry_idx = level_idx - self.re_entry_distance
+                if (self.price > level - entry_offset >= self.last_price and 
+                    re_entry_idx in self.retrace_levels and
+                    self.retrace_levels[re_entry_idx] == 'up'):
+                    self.retrace_levels[re_entry_idx] = None  # Clear the retrace flag
 
                     # We can enter trade here.
                     for _ in range(self.max_contracts_per_trade):  # number of contracts to trade

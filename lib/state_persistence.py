@@ -89,7 +89,7 @@ class StatePersistence:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     strategy_name TEXT NOT NULL,
                     level_index INTEGER NOT NULL,
-                    is_retraced INTEGER NOT NULL,
+                    direction TEXT,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (strategy_name) REFERENCES strategy_state(strategy_name),
                     UNIQUE(strategy_name, level_index)
@@ -192,12 +192,12 @@ class StatePersistence:
                           trade[3], trade[4], trade[5]))
                 
                 # Save retrace levels (update or insert)
-                for level_idx, is_retraced in state.get('retrace_levels', {}).items():
+                for level_idx, direction in state.get('retrace_levels', {}).items():
                     cursor.execute('''
                         INSERT OR REPLACE INTO retrace_levels 
-                        (strategy_name, level_index, is_retraced)
+                        (strategy_name, level_index, direction)
                         VALUES (?, ?, ?)
-                    ''', (strategy_name, level_idx, 1 if is_retraced else 0))
+                    ''', (strategy_name, level_idx, direction))
                 
                 # Save cumulative PnL (only new values)
                 cursor.execute('''
@@ -323,7 +323,7 @@ class StatePersistence:
                 
                 # Load retrace levels
                 cursor.execute('''
-                    SELECT level_index, is_retraced
+                    SELECT level_index, direction
                     FROM retrace_levels 
                     WHERE strategy_name = ?
                     ORDER BY level_index
@@ -331,7 +331,7 @@ class StatePersistence:
                 
                 state['retrace_levels'] = {}
                 for level_row in cursor.fetchall():
-                    state['retrace_levels'][level_row[0]] = bool(level_row[1])
+                    state['retrace_levels'][level_row[0]] = level_row[1]  # direction: 'up', 'down', or None
                 
                 # Load cumulative PnL
                 cursor.execute('''
