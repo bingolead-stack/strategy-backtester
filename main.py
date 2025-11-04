@@ -241,8 +241,8 @@ class Signal(BaseModel):
 
 @app.post("/webhook")
 async def receive_signal(signal: Signal):
-    global last_price, swing_strategy_long, scalp_strategy_long, swing_strategy_short, scalp_strategy_short
-    if swing_strategy_long is None or scalp_strategy_long is None or swing_strategy_short is None or scalp_strategy_short is None:
+    global last_price, swing_strategy_long, scalp_strategy_long, swing_strategy_short, scalp_strategy_short, high_pnl_strategy
+    if swing_strategy_long is None or swing_strategy_short is None or high_pnl_strategy is None:
         logger.error("Strategy not initialized")
         raise HTTPException(status_code=500, detail="Strategy not initialized")
 
