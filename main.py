@@ -138,6 +138,7 @@ async def lifespan(app: FastAPI):
         persistence=state_persistence,
         auto_save=True
     )
+    high_pnl_strategy.load_static_levels(STATIC_LEVELS)
     # Try to load saved state
     logger.info("Attempting to load saved state...")
     if swing_strategy_long.load_state():
@@ -258,7 +259,7 @@ async def receive_signal(signal: Signal):
         # scalp_strategy_short.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
 
     high_pnl_strategy.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
-    
+
     last_price = signal.close
     return {"status": "success"}
 
