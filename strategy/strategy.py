@@ -106,6 +106,56 @@ class Strategy:
             'static_levels': self.static_levels
         }
     
+    def _parse_datetime(self, value):
+        """
+        Helper function to parse datetime from string or return datetime object.
+        
+        Args:
+            value: String or datetime object
+            
+        Returns:
+            datetime object or None
+        """
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value)
+            except (ValueError, AttributeError):
+                # Try alternative formats if fromisoformat fails
+                try:
+                    return datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
+                except ValueError:
+                    try:
+                        return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+                    except ValueError:
+                        return None
+        return None
+    
+    def _calculate_duration(self, start_time, end_time):
+        """
+        Helper function to safely calculate duration between two times.
+        
+        Args:
+            start_time: datetime object or string
+            end_time: datetime object or string
+            
+        Returns:
+            timedelta object or string representation if calculation fails
+        """
+        start = self._parse_datetime(start_time)
+        end = self._parse_datetime(end_time)
+        
+        if start is None or end is None:
+            return "N/A"
+        
+        try:
+            return end - start
+        except TypeError:
+            return "N/A"
+    
     def set_state(self, state: dict):
         """
         Restore strategy state from a dictionary.
@@ -124,10 +174,7 @@ class Strategy:
         # Handle index - it might be stored as string in DB
         index_val = state.get('index')
         if index_val:
-            try:
-                self.index = datetime.fromisoformat(str(index_val))
-            except:
-                self.index = index_val
+            self.index = self._parse_datetime(index_val)
         else:
             self.index = None
         
@@ -138,8 +185,26 @@ class Strategy:
         self.reward_to_risk = state.get('reward_to_risk', 0)
         self.max_losing_streak = state.get('max_losing_streak', 0)
         
-        self.trade_history = state.get('trade_history', [])
-        self.open_trade_list = state.get('open_trade_list', [])
+        # Convert trade_history datetime strings back to datetime objects
+        trade_history = state.get('trade_history', [])
+        self.trade_history = []
+        for trade in trade_history:
+            if len(trade) >= 4:
+                trade_time = self._parse_datetime(trade[0])
+                self.trade_history.append((trade_time, trade[1], trade[2], trade[3]))
+            else:
+                self.trade_history.append(trade)
+        
+        # Convert open_trade_list datetime strings back to datetime objects
+        open_trade_list = state.get('open_trade_list', [])
+        self.open_trade_list = []
+        for trade in open_trade_list:
+            if len(trade) >= 6:
+                trade_time = self._parse_datetime(trade[0])
+                self.open_trade_list.append([trade_time, trade[1], trade[2], trade[3], trade[4], trade[5]])
+            else:
+                self.open_trade_list.append(trade)
+        
         self.retrace_levels = state.get('retrace_levels', {})
         self.cumulative_pnl = state.get('cumulative_pnl', [])
         
@@ -302,6 +367,17 @@ class Strategy:
             trades_to_remove = []
             for i in range(len(self.open_trade_list)):
                 trade_time, entry_price, stop_level, trailing_stop, traded_level, take_profit_level  = self.open_trade_list[i]
+                
+                # Ensure trade_time is a datetime object (convert from string if needed)
+                if not isinstance(trade_time, datetime):
+                    trade_time = self._parse_datetime(trade_time)
+                    if trade_time is None:
+                        # Skip this trade if we can't parse the datetime
+                        print(f"Warning: Could not parse trade_time for trade {i}, skipping")
+                        continue
+                    # Update the list with the parsed datetime
+                    self.open_trade_list[i][0] = trade_time
+                
                 is_long_trade = entry_price < take_profit_level
 
                 if is_long_trade:
@@ -346,7 +422,7 @@ class Strategy:
                         print(f"    Entry Price: {entry_price}")
                         print(f"    Exit Price: {self.price}")
                         print(
-                            f"    Trade Duration: {self.index - trade_time}")  # last two trades are our entry and exit
+                            f"    Trade Duration: {self._calculate_duration(trade_time, self.index)}")  # last two trades are our entry and exit
 
                 else:
                     if trailing_stop is None:
@@ -385,7 +461,7 @@ class Strategy:
                             f"\t\t Profit/Loss: {pnl:.2f}")
                         print(f"    Entry Price: {entry_price}")
                         print(f"    Exit Price: {self.price}")
-                        print(f"    Trade Duration: {self.index - trade_time}")
+                        print(f"    Trade Duration: {self._calculate_duration(trade_time, self.index)}")
 
             for trade in trades_to_remove:
                 del self.open_trade_list[self.open_trade_list.index(trade)]  # remove the open trade
