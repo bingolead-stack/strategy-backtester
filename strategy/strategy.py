@@ -293,23 +293,29 @@ class Strategy:
                         entry_price = self.price
                         stop_level = entry_price - self.stop_loss_offset
                         trailing_stop = None
-                        self.position = 'long'
-                        self.trade_history.append((self.index, 'BUY', entry_price, 0))  # pnl for buy trade is $0 since we haven't locked in any pnl yet
-
                         take_profit_level = entry_price + self.take_profit_offset
                         trade = [self.index, entry_price, stop_level, trailing_stop, level, take_profit_level]
-
-                        self.open_trade_list.append(trade)
-                        self.open_trade_count += 1
-                        self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
 
                         print(
                             f"{self.name}: [{self.index}] BUY ORDER SENT at {entry_price} (Retraced to static level {level})")
                         print(f"{self.name}: Stop-Loss Level: {stop_level}")
                         
+                        order_success = False
                         if self.trader is not None:
-                            self.trader.enter_position(quantity=1, is_long=True)
-                        max_open_trades -= 1
+                            order_success = self.trader.enter_position(quantity=1, is_long=True)
+                        else:
+                            # If no trader, assume success for backtesting
+                            order_success = True
+                        
+                        if order_success:
+                            self.position = 'long'
+                            self.trade_history.append((self.index, 'BUY', entry_price, 0))  # pnl for buy trade is $0 since we haven't locked in any pnl yet
+                            self.open_trade_list.append(trade)
+                            self.open_trade_count += 1
+                            self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
+                            max_open_trades -= 1
+                        else:
+                            print(f"{self.name}: Order failed. Trade not added to open trade list.")
 
         else:
             print(
@@ -340,24 +346,31 @@ class Strategy:
 
                     # We can enter trade here.
                     for _ in range(self.max_contracts_per_trade):  # number of contracts to trade
+                        entry_price = self.price
+                        stop_level = self.price + self.stop_loss_offset
+                        trailing_stop = None
+                        take_profit_level = entry_price - self.take_profit_offset
+                        trade = [self.index, entry_price, stop_level, trailing_stop, level, take_profit_level]
 
-                            entry_price = self.price
-                            stop_level = self.price + self.stop_loss_offset
-                            trailing_stop = None
+                        print(f"{self.name}: [{self.index}] SELL ORDER SENT at {entry_price} (Retraced up to static level {level})")
+                        print(f"{self.name}: Stop-Loss Level: {stop_level}")
+                        
+                        order_success = False
+                        if self.trader is not None:
+                            order_success = self.trader.enter_position(quantity=1, is_long=False)
+                        else:
+                            # If no trader, assume success for backtesting
+                            order_success = True
+                        
+                        if order_success:
                             self.position = 'short'
                             self.trade_history.append((self.index, 'SELL', entry_price, 0))
-
-                            take_profit_level = entry_price - self.take_profit_offset
-                            trade = [self.index, entry_price, stop_level, trailing_stop, level, take_profit_level]
                             self.open_trade_list.append(trade)
                             self.open_trade_count += 1
                             self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
-
-                            print(f"{self.name}: [{self.index}] SELL ORDER SENT at {entry_price} (Retraced up to static level {level})")
-                            print(f"{self.name}: Stop-Loss Level: {stop_level}")
-                            if self.trader is not None:
-                                self.trader.enter_position(quantity=1, is_long=False)
                             max_open_trades -= 1
+                        else:
+                            print(f"{self.name}: Order failed. Trade not added to open trade list.")
 
         else:
             print(f"DEBUG: {self.name}: Open trade = {self.open_trade_count}, max open trades = {self.max_open_trades}. No room left to trade. Skipping")

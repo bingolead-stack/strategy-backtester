@@ -37,33 +37,37 @@ class TradovateTrader:
     def enter_position(self, quantity, is_long):
         if quantity == 0:
             print(f"Quantity is 0. Skipping order.")
-            return
+            return False
         
-        self.ensure_account_id()
-        side = "Buy" if is_long else "Sell"
+        try:
+            self.ensure_account_id()
+            side = "Buy" if is_long else "Sell"
 
-        order = {
-            "accountSpec": self.username,
-            "accountId": self.account_id,
-            "action": side,
-            "symbol": self.symbol,
-            "orderQty": quantity,
-            "orderType": "Market",
-            "isAutomated": True
-        }
+            order = {
+                "accountSpec": self.username,
+                "accountId": self.account_id,
+                "action": side,
+                "symbol": self.symbol,
+                "orderQty": quantity,
+                "orderType": "Market",
+                "isAutomated": True
+            }
 
-        access_token = self.token_manager.get_token()
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
+            access_token = self.token_manager.get_token()
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
 
-        with httpx.Client() as client:
-            res = client.post(f"{self.api_url}/order/placeorder", json=order, headers=headers)
-            res.raise_for_status()
-            data = res.json()
-            print(f"{side} order placed: {data}")
-            return data
+            with httpx.Client() as client:
+                res = client.post(f"{self.api_url}/order/placeorder", json=order, headers=headers)
+                res.raise_for_status()
+                data = res.json()
+                print(f"{side} order placed: {data}")
+                return True
+        except Exception as e:
+            print(f"Error placing order: {e}")
+            return False
 
     def get_current_position(self):
         """Get current position(s) for the account."""
