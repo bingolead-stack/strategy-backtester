@@ -1,7 +1,6 @@
 import httpx
 from dotenv import load_dotenv
 import os
-from lib.token_manager import TokenManager
 
 # Load environment variables
 load_dotenv()
@@ -36,6 +35,10 @@ class TradovateTrader:
             self.account_id = accounts[0]["id"]
 
     def enter_position(self, quantity, is_long):
+        if quantity == 0:
+            print(f"Quantity is 0. Skipping order.")
+            return
+        
         self.ensure_account_id()
         side = "Buy" if is_long else "Sell"
 
@@ -61,3 +64,28 @@ class TradovateTrader:
             data = res.json()
             print(f"{side} order placed: {data}")
             return data
+
+    def get_current_position(self):
+        """Get current position(s) for the account."""
+        self.ensure_account_id()
+        access_token = self.token_manager.get_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        with httpx.Client() as client:
+            res = client.get(f"{self.api_url}/position/list", headers=headers)
+            res.raise_for_status()
+            positions = res.json()
+            
+            # Filter positions by account_id
+            account_positions = [pos for pos in positions if pos.get("accountId") == self.account_id]
+            return account_positions
+
+    def get_net_position(self):
+        """Get the net position (netPos) for the current symbol/account.
+        Returns 0 if no position exists."""
+        positions = self.get_current_position()
+        if not positions:
+            return 0
+        # Return the netPos from the first position (or sum if multiple)
+        # Typically there should be one position per account/symbol
+        return positions[0].get("netPos", 0)

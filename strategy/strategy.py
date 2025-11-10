@@ -414,7 +414,9 @@ class Strategy:
                         self.open_trade_count -= 1
                         trades_to_remove.append([trade_time, entry_price, stop_level, trailing_stop, traded_level, take_profit_level])
                         if self.trader is not None:
-                            self.trader.enter_position(quantity=1, is_long=False)
+                            netPosition = self.trader.get_net_position()
+                            if netPosition > 0:
+                                self.trader.enter_position(quantity=1, is_long=False)
 
                         print(
                             f"[{self.index}] SELL ORDER EXECUTED at {self.price} (stop level hit {stop_level} or trailing stop hit at {trailing_stop})\n"
@@ -454,7 +456,9 @@ class Strategy:
                         trades_to_remove.append([trade_time, entry_price, stop_level, trailing_stop, traded_level, take_profit_level])
                         
                         if self.trader is not None:
-                            self.trader.enter_position(quantity=1, is_long=True)
+                            netPosition = self.trader.get_net_position()
+                            if netPosition < 0:
+                                self.trader.enter_position(quantity=1, is_long=True)
                         
                         print(
                             f"[{self.index}] COVER ORDER EXECUTED at {self.price} (stop level hit {stop_level} or trailing stop hit at {trailing_stop})\n"
