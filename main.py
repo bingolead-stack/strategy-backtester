@@ -15,9 +15,10 @@ from lib.token_manager import TokenManager
 from lib.tradovate_api import TradovateTrader
 from lib.state_persistence import StatePersistence
 from strategy.strategy import Strategy
+from lib.logging_config import setup_logging
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+setup_logging(log_dir="logs", log_level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 IS_TRADING_LONG = os.getenv("IS_LONG_ONLY_TRADE")
@@ -205,31 +206,50 @@ async def lifespan(app: FastAPI):
 
     yield
     # Shutdown
-    logger.info("Shutdown: running final strategy result.")
+    logger.info("="*80)
+    logger.info("Shutdown: running final strategy result and saving state.")
+    logger.info("="*80)
     try:
-
+        # Force save state before printing stats
+        logger.info("Forcing state save before shutdown...")
+        
         if IS_TRADING_LONG:
-            logger.info("====================Swing strategy result==========================")
+            logger.info("Saving Swing Long Strategy state...")
+            swing_strategy_long.save_state()
+            logger.info("="*80)
+            logger.info("Swing Long Strategy Results")
+            logger.info("="*80)
             swing_strategy_long.print_trade_stats()
-            logger.info("====================End of Swing==========================")
-            # logger.info("====================Scalp strategy result==========================")
+            # logger.info("="*80)
+            # logger.info("Scalp Long Strategy Results")
+            # logger.info("="*80)
             # scalp_strategy_long.print_trade_stats()
-            # logger.info("====================End of Scalp==========================")
 
         else:
-            logger.info("====================Swing strategy result==========================")
+            logger.info("Saving Swing Short Strategy state...")
+            swing_strategy_short.save_state()
+            logger.info("="*80)
+            logger.info("Swing Short Strategy Results")
+            logger.info("="*80)
             swing_strategy_short.print_trade_stats()
-            logger.info("====================End of Swing==========================")
-            # logger.info("====================Scalp strategy result==========================")
+            # logger.info("="*80)
+            # logger.info("Scalp Short Strategy Results")
+            # logger.info("="*80)
             # scalp_strategy_short.print_trade_stats()
-            # logger.info("====================End of Scalp==========================")
 
-        logger.info("====================High PNL strategy result==========================")
+        logger.info("Saving High PNL Strategy state...")
+        high_pnl_strategy.save_state()
+        logger.info("="*80)
+        logger.info("High PNL Strategy Results")
+        logger.info("="*80)
         high_pnl_strategy.print_trade_stats()
-        logger.info("====================End of High PNL==========================")
+        
+        logger.info("="*80)
+        logger.info("All states saved successfully during shutdown.")
+        logger.info("="*80)
 
     except Exception as e:
-        logger.error(f"Error in shutdown: {e}")
+        logger.error(f"Error in shutdown: {e}", exc_info=True)
 
 app = FastAPI(lifespan=lifespan)
 
@@ -246,21 +266,27 @@ async def receive_signal(signal: Signal):
         logger.error("Strategy not initialized")
         raise HTTPException(status_code=500, detail="Strategy not initialized")
 
-    # logger.info(f"Received signal: {signal}")
+    logger.debug(f"Received signal - close={signal.close}, high={signal.high}, low={signal.low}, last_price={last_price}")
+    
     if last_price is None:
         last_price = signal.close
+        logger.info(f"First signal received, setting last_price={last_price}")
         return {"status": "success"}
     
     if IS_TRADING_LONG:
+        logger.debug("Updating Swing Long Strategy")
         swing_strategy_long.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
         # scalp_strategy_long.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
     else:
+        logger.debug("Updating Swing Short Strategy")
         swing_strategy_short.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
         # scalp_strategy_short.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
 
+    logger.debug("Updating High PNL Strategy")
     high_pnl_strategy.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
 
     last_price = signal.close
+    logger.debug("Signal processing complete")
     return {"status": "success"}
 
 if __name__ == "__main__":
