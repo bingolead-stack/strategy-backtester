@@ -5,7 +5,8 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional
 import threading
 
-logger = logging.getLogger(__name__)
+# Use the database logger configured in logging_config
+db_logger = logging.getLogger('database')
 
 class StatePersistence:
     """
@@ -122,7 +123,7 @@ class StatePersistence:
             
             conn.commit()
             conn.close()
-            logger.info(f"Database initialized at {self.db_path}")
+            db_logger.info(f"Database initialized at {self.db_path}")
     
     def save_strategy_state(self, strategy_name: str, state: Dict[str, Any]):
         """
@@ -229,11 +230,15 @@ class StatePersistence:
                             ''', (strategy_name, level, idx))
                 
                 conn.commit()
-                logger.debug(f"Successfully saved state for strategy: {strategy_name}")
+                db_logger.info(f"Successfully saved state to DB for strategy: {strategy_name}")
+                db_logger.debug(f"  - Saved {len(new_trades)} new trades (total history: {len(trade_history)})")
+                db_logger.debug(f"  - Saved {len(state.get('open_trade_list', []))} open trades")
+                db_logger.debug(f"  - Saved {len(new_pnl_values)} new PnL values")
+                db_logger.debug(f"  - Saved {len([v for v in state.get('retrace_levels', {}).values() if v is not None])} active retrace levels")
                 
             except Exception as e:
                 conn.rollback()
-                logger.error(f"Error saving strategy state for {strategy_name}: {e}")
+                db_logger.error(f"Failed to save strategy state to DB for {strategy_name}: {e}", exc_info=True)
                 raise
             finally:
                 conn.close()
@@ -264,7 +269,7 @@ class StatePersistence:
                 
                 row = cursor.fetchone()
                 if not row:
-                    logger.info(f"No saved state found for strategy: {strategy_name}")
+                    db_logger.info(f"No saved state found for strategy: {strategy_name}")
                     return None
                 
                 state = {
@@ -353,11 +358,17 @@ class StatePersistence:
                 
                 state['static_levels'] = [row[0] for row in cursor.fetchall()]
                 
-                logger.info(f"Successfully loaded state for strategy: {strategy_name}")
+                db_logger.info(f"Successfully loaded state from DB for strategy: {strategy_name}")
+                db_logger.debug(f"  - Loaded {len(state['trade_history'])} trades from history")
+                db_logger.debug(f"  - Loaded {len(state['open_trade_list'])} open trades")
+                db_logger.debug(f"  - Loaded {len(state['cumulative_pnl'])} PnL values")
+                db_logger.debug(f"  - Loaded {len([v for v in state['retrace_levels'].values() if v is not None])} active retrace levels")
+                db_logger.debug(f"  - Total PnL: {state['total_pnl']}")
+                db_logger.debug(f"  - Open trade count: {state['open_trade_count']}")
                 return state
                 
             except Exception as e:
-                logger.error(f"Error loading strategy state for {strategy_name}: {e}")
+                db_logger.error(f"Failed to load strategy state from DB for {strategy_name}: {e}", exc_info=True)
                 raise
             finally:
                 conn.close()
@@ -382,11 +393,11 @@ class StatePersistence:
                 cursor.execute('DELETE FROM strategy_state WHERE strategy_name = ?', (strategy_name,))
                 
                 conn.commit()
-                logger.info(f"Deleted state for strategy: {strategy_name}")
+                db_logger.info(f"Deleted state for strategy: {strategy_name}")
                 
             except Exception as e:
                 conn.rollback()
-                logger.error(f"Error deleting strategy state for {strategy_name}: {e}")
+                db_logger.error(f"Error deleting strategy state for {strategy_name}: {e}", exc_info=True)
                 raise
             finally:
                 conn.close()
