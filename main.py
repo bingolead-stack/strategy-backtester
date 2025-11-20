@@ -248,11 +248,4 @@ async def receive_signal(signal: Signal):
 
 if __name__ == "__main__":
     logger.info("Starting FastAPI application...")
-    # Disable uvicorn logging completely - only use our strategy logger
-    uvicorn.run(
-        "main:app", 
-        host="0.0.0.0", 
-        port=80,
-        log_config=None,  # Disable default logging config
-        access_log=False   # Disable access logs
-    )
+    uvicorn.run("main:app", host="0.0.0.0", port=80)

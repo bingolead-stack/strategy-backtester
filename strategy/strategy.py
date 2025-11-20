@@ -230,7 +230,6 @@ class Strategy:
         if self.persistence and self.auto_save:
             try:
                 state = self.get_state()
-                strategy_logger.info(f"💾 Saving state: {self.name} | Open trades: {state['open_trade_count']}, Open list: {len(state['open_trade_list'])}")
                 self.persistence.save_strategy_state(self.name, state)
             except Exception as e:
                 strategy_logger.error(f"Failed to save state for {self.name}: {e}", exc_info=True)
