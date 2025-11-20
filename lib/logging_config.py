@@ -1,10 +1,10 @@
 """
 Logging configuration for the trading bot.
-Sets up rotating file handlers to keep logs organized and manageable.
+Only strategy.log is created - all other logging is disabled.
 """
 import logging
 import os
-from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
+from logging.handlers import RotatingFileHandler
 from datetime import datetime
 
 def setup_logging(log_dir="logs", log_level=logging.INFO):
@@ -40,11 +40,16 @@ def setup_logging(log_dir="logs", log_level=logging.INFO):
     strategy_file_handler.setLevel(logging.INFO)
     strategy_file_handler.setFormatter(formatter)
     
-    # Configure root logger - only errors
+    # Disable ALL logging by default
+    logging.disable(logging.CRITICAL)
+    
+    # Configure root logger - completely silent
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.ERROR)
+    root_logger.setLevel(logging.CRITICAL)
     root_logger.handlers.clear()
-    root_logger.addHandler(console_handler)
+    
+    # Re-enable only for strategy logger
+    logging.disable(logging.NOTSET)
     
     # Configure strategy logger - ONLY logger we use
     strategy_logger = logging.getLogger('strategy')
@@ -54,10 +59,17 @@ def setup_logging(log_dir="logs", log_level=logging.INFO):
     strategy_logger.setLevel(logging.INFO)
     strategy_logger.propagate = False
     
-    # Silence all other loggers
-    for logger_name in ['database', 'trades', 'uvicorn', 'uvicorn.access', 'uvicorn.error']:
-        logging.getLogger(logger_name).setLevel(logging.CRITICAL)
-        logging.getLogger(logger_name).handlers.clear()
+    # Completely silence all other loggers - prevent file creation
+    silence_loggers = [
+        'database', 'trades', 'uvicorn', 'uvicorn.access', 'uvicorn.error',
+        'fastapi', 'asyncio', 'websockets', 'httpx', 'httpcore'
+    ]
+    for logger_name in silence_loggers:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.CRITICAL)
+        logger.handlers.clear()
+        logger.propagate = False
+        logger.disabled = True
     
     # Log startup message
     strategy_logger.info("="*80)

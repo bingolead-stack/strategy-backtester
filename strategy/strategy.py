@@ -210,7 +210,14 @@ class Strategy:
             else:
                 self.open_trade_list.append(trade)
         
-        self.retrace_levels = state.get('retrace_levels', {})
+        # Convert retrace_levels - keys might be strings from DB, need to be integers
+        retrace_levels_raw = state.get('retrace_levels', {})
+        self.retrace_levels = {}
+        for key, value in retrace_levels_raw.items():
+            # Convert string keys back to integers
+            int_key = int(key) if isinstance(key, str) else key
+            self.retrace_levels[int_key] = value
+        
         self.cumulative_pnl = state.get('cumulative_pnl', [])
         
         # Static levels should already be loaded via load_static_levels()
@@ -223,6 +230,7 @@ class Strategy:
         if self.persistence and self.auto_save:
             try:
                 state = self.get_state()
+                strategy_logger.info(f"💾 Saving state: {self.name} | Open trades: {state['open_trade_count']}, Open list: {len(state['open_trade_list'])}")
                 self.persistence.save_strategy_state(self.name, state)
             except Exception as e:
                 strategy_logger.error(f"Failed to save state for {self.name}: {e}", exc_info=True)
@@ -238,9 +246,14 @@ class Strategy:
             try:
                 state = self.persistence.load_strategy_state(self.name)
                 if state:
+                    strategy_logger.info(f"📂 Loading state from DB for {self.name}:")
+                    strategy_logger.info(f"   DB shows: Open trades={state.get('open_trade_count')}, Open list size={len(state.get('open_trade_list', []))}, PnL=${state.get('total_pnl', 0):.2f}")
+                    
                     self.set_state(state)
+                    
                     active_retraces = [(k, v) for k, v in self.retrace_levels.items() if v is not None]
-                    strategy_logger.info(f"✓ Loaded state for {self.name} - Open trades: {self.open_trade_count}, PnL: ${self.total_pnl:.2f}, Active retraces: {len(active_retraces)}")
+                    strategy_logger.info(f"✓ State loaded for {self.name}:")
+                    strategy_logger.info(f"   After restore: Open trades={self.open_trade_count}, Open list size={len(self.open_trade_list)}, Active retraces={len(active_retraces)}")
                     return True
                 else:
                     strategy_logger.info(f"Starting fresh - No saved state for {self.name}")
@@ -353,7 +366,7 @@ class Strategy:
                             self.open_trade_count += 1
                             self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
                             max_open_trades -= 1
-                            strategy_logger.info(f"{self.name}: ✓ Order executed successfully. Open trades: {self.open_trade_count}")
+                            strategy_logger.info(f"{self.name}: ✓ Order executed successfully. Open trades: {self.open_trade_count} (list size: {len(self.open_trade_list)})")
                         else:
                             strategy_logger.warning(f"{self.name}: ✗ Order FAILED. Trade not added to list.")
 
@@ -444,7 +457,7 @@ class Strategy:
                             self.open_trade_count += 1
                             self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
                             max_open_trades -= 1
-                            strategy_logger.info(f"{self.name}: ✓ Order executed successfully. Open trades: {self.open_trade_count}")
+                            strategy_logger.info(f"{self.name}: ✓ Order executed successfully. Open trades: {self.open_trade_count} (list size: {len(self.open_trade_list)})")
                         else:
                             strategy_logger.warning(f"{self.name}: ✗ Order FAILED. Trade not added to list.")
 
@@ -510,6 +523,7 @@ class Strategy:
 
                         reason = "Trailing stop" if trailing_stop and self.price <= trailing_stop else ("Stop loss" if self.price <= stop_level else "Take profit")
                         strategy_logger.info(f"{self.name}: LONG EXIT - {reason} at {self.price} | PnL: ${pnl:.2f} | Entry: {entry_price} | Duration: {self._calculate_duration(trade_time, self.index)}")
+                        strategy_logger.info(f"{self.name}: Open trade count decreased to {self.open_trade_count}")
 
                 else:
                     if trailing_stop is None:
@@ -547,9 +561,15 @@ class Strategy:
                         
                         reason = "Trailing stop" if trailing_stop and self.price >= trailing_stop else ("Stop loss" if self.price >= stop_level else "Take profit")
                         strategy_logger.info(f"{self.name}: SHORT EXIT - {reason} at {self.price} | PnL: ${pnl:.2f} | Entry: {entry_price} | Duration: {self._calculate_duration(trade_time, self.index)}")
+                        strategy_logger.info(f"{self.name}: Open trade count decreased to {self.open_trade_count}")
 
             for trade in trades_to_remove:
                 del self.open_trade_list[self.open_trade_list.index(trade)]  # remove the open trade
+            
+            # Validate open_trade_count matches open_trade_list length
+            if self.open_trade_count != len(self.open_trade_list):
+                strategy_logger.warning(f"{self.name}: MISMATCH! open_trade_count={self.open_trade_count} but open_trade_list has {len(self.open_trade_list)} items. Fixing...")
+                self.open_trade_count = len(self.open_trade_list)
 
     def update(self, index: datetime, price: float, last_price: float, high_price: float, low_price: float):
         # check prices are valid
