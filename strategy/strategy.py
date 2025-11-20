@@ -6,9 +6,8 @@ import logging
 from lib.tradovate_api import TradovateTrader
 from lib.state_persistence import StatePersistence
 
-# Get loggers for different purposes
+# Get strategy logger - only logger used
 strategy_logger = logging.getLogger('strategy')
-trade_logger = logging.getLogger('trades')
 
 class Strategy:
 
@@ -224,14 +223,6 @@ class Strategy:
         if self.persistence and self.auto_save:
             try:
                 state = self.get_state()
-                strategy_logger.debug(f"Saving state for {self.name}")
-                strategy_logger.debug(f"  - Open trades: {state['open_trade_count']}")
-                strategy_logger.debug(f"  - Open trade list size: {len(state['open_trade_list'])}")
-                strategy_logger.debug(f"  - Total PnL: {state['total_pnl']}")
-                strategy_logger.debug(f"  - Current price: {state['price']}")
-                strategy_logger.debug(f"  - Last price: {state['last_price']}")
-                strategy_logger.debug(f"  - Index: {state['index']}")
-                strategy_logger.debug(f"  - Retrace levels with values: {[(k, v) for k, v in state['retrace_levels'].items() if v is not None]}")
                 self.persistence.save_strategy_state(self.name, state)
             except Exception as e:
                 strategy_logger.error(f"Failed to save state for {self.name}: {e}", exc_info=True)
@@ -247,25 +238,12 @@ class Strategy:
             try:
                 state = self.persistence.load_strategy_state(self.name)
                 if state:
-                    strategy_logger.info(f"Loading saved state for {self.name}")
-                    strategy_logger.debug(f"  - Open trades from DB: {state.get('open_trade_count')}")
-                    strategy_logger.debug(f"  - Open trade list from DB: {len(state.get('open_trade_list', []))}")
-                    strategy_logger.debug(f"  - Total PnL from DB: ${state.get('total_pnl', 0):.2f}")
-                    strategy_logger.debug(f"  - Total trades from DB: {state.get('total_trade', 0)}")
-                    strategy_logger.debug(f"  - Current price from DB: {state.get('price')}")
-                    strategy_logger.debug(f"  - Last price from DB: {state.get('last_price')}")
-                    strategy_logger.debug(f"  - Index from DB: {state.get('index')}")
-                    strategy_logger.debug(f"  - Retrace levels with values from DB: {[(k, v) for k, v in state.get('retrace_levels', {}).items() if v is not None]}")
-                    
                     self.set_state(state)
-                    
-                    strategy_logger.info(f"State loaded successfully for {self.name}")
-                    strategy_logger.debug(f"  - Open trades after loading: {self.open_trade_count}")
-                    strategy_logger.debug(f"  - Open trade list after loading: {len(self.open_trade_list)}")
-                    strategy_logger.debug(f"  - Retrace levels after loading: {[(k, v) for k, v in self.retrace_levels.items() if v is not None]}")
+                    active_retraces = [(k, v) for k, v in self.retrace_levels.items() if v is not None]
+                    strategy_logger.info(f"✓ Loaded state for {self.name} - Open trades: {self.open_trade_count}, PnL: ${self.total_pnl:.2f}, Active retraces: {len(active_retraces)}")
                     return True
                 else:
-                    strategy_logger.info(f"No saved state found for {self.name}")
+                    strategy_logger.info(f"Starting fresh - No saved state for {self.name}")
             except Exception as e:
                 strategy_logger.error(f"Failed to load state for {self.name}: {e}", exc_info=True)
         return False
@@ -297,43 +275,53 @@ class Strategy:
         # need valid data
 
         max_open_trades = self.calculate_max_open_trades(self.price)
-        strategy_logger.debug(f"{self.name} [BUY]: Starting entry check | max_open_trades={max_open_trades}, open_trade_count={self.open_trade_count}, price={self.price}, last_price={self.last_price}, high={self.high_price}, low={self.low_price}")
         
         if max_open_trades > 0:  # can trade
-            strategy_logger.debug(f"{self.name} [BUY]: Room available to trade, checking {len(self.static_levels)} levels...")
+            level_crossed = False
             for level in self.static_levels:
                 entry_offset = self.entry_offset
                 level_idx = self.static_levels.index(level)
                 
                 # Track direction of level cross
                 if self.price <= level < self.high_price:  # Price crossed DOWN through level
-                    strategy_logger.debug(f"{self.name}: Price crossed DOWN through level {level} (level_idx={level_idx}) with price {self.price}, high={self.high_price}")
+                    level_crossed = True
+                    strategy_logger.info(f"{self.name}: Price crossed DOWN through level {level} (level_idx={level_idx})")
+                    strategy_logger.info(f"  Current price: {self.price}, High: {self.high_price}, Level: {level}")
                     self.retrace_levels[level_idx] = 'down'
                 elif self.price >= level > self.low_price:  # Price crossed UP through level
-                    strategy_logger.debug(f"{self.name}: Price crossed UP through level {level} (level_idx={level_idx}) with price {self.price}, low={self.low_price}")
+                    level_crossed = True
+                    strategy_logger.info(f"{self.name}: Price crossed UP through level {level} (level_idx={level_idx})")
+                    strategy_logger.info(f"  Current price: {self.price}, Low: {self.low_price}, Level: {level}")
                     self.retrace_levels[level_idx] = 'up'
 
                 # For long strategy, enter when price crosses up after a down retrace
                 re_entry_idx = level_idx + self.re_entry_distance
                 
-                # Debug entry condition checks
+                # Check entry conditions
                 condition1 = self.price <= level + entry_offset < self.last_price
                 condition2 = re_entry_idx in self.retrace_levels
                 condition3 = self.retrace_levels.get(re_entry_idx) == 'down' if condition2 else False
                 
-                # Log entry condition evaluation for levels near current price
-                if abs(self.price - level) < 50:  # Only log for nearby levels to avoid spam
-                    strategy_logger.debug(f"{self.name}: Checking entry at level {level} (idx={level_idx}, re_entry_idx={re_entry_idx})")
-                    strategy_logger.debug(f"  Condition 1 (price cross down): {condition1} | price={self.price}, threshold={level + entry_offset}, last={self.last_price}")
-                    strategy_logger.debug(f"  Condition 2 (re_entry_idx exists): {condition2} | re_entry_idx={re_entry_idx}, valid_indices={list(self.retrace_levels.keys())[:10]}...")
-                    strategy_logger.debug(f"  Condition 3 (retrace is 'down'): {condition3} | retrace_value={self.retrace_levels.get(re_entry_idx)}")
-                    
-                    if condition1 and condition2 and not condition3:
-                        strategy_logger.debug(f"  -> Entry NOT triggered: Price crossed but retrace level {re_entry_idx} is '{self.retrace_levels.get(re_entry_idx)}' (need 'down')")
-                    elif condition1 and not condition2:
-                        strategy_logger.debug(f"  -> Entry NOT triggered: Price crossed but re_entry_idx {re_entry_idx} not in retrace_levels dict")
-                    elif not condition1:
-                        strategy_logger.debug(f"  -> Entry NOT triggered: Price condition not met (no cross detected)")
+                # Log detailed decision process when price crosses this level or nearby
+                if abs(self.price - level) < 50:  # Near this level
+                    if condition1 or level_crossed:  # Price action happening
+                        strategy_logger.info(f"{self.name}: Evaluating LONG entry at level {level}")
+                        strategy_logger.info(f"  Step 1 - Price crossed down through entry zone?")
+                        strategy_logger.info(f"    Price: {self.price}, Entry threshold: {level + entry_offset}, Last price: {self.last_price}")
+                        strategy_logger.info(f"    Result: {'YES' if condition1 else 'NO'}")
+                        
+                        if condition1:
+                            strategy_logger.info(f"  Step 2 - Does re-entry level {re_entry_idx} exist?")
+                            strategy_logger.info(f"    Result: {'YES' if condition2 else 'NO'}")
+                            
+                            if condition2:
+                                strategy_logger.info(f"  Step 3 - Is re-entry level {re_entry_idx} marked as 'down' retrace?")
+                                strategy_logger.info(f"    Current value: '{self.retrace_levels.get(re_entry_idx)}'")
+                                strategy_logger.info(f"    Result: {'YES - ENTRY CONDITIONS MET!' if condition3 else 'NO - Need down retrace'}")
+                            else:
+                                strategy_logger.info(f"  Decision: Cannot enter - Re-entry index {re_entry_idx} not in retrace_levels")
+                        else:
+                            strategy_logger.info(f"  Decision: Cannot enter - Price hasn't crossed down through entry zone")
                 
                 if condition1 and condition2 and condition3:
                     strategy_logger.info(f"{self.name}: *** ENTRY TRIGGERED *** at level {level} (level_idx={level_idx}, re_entry_idx={re_entry_idx})")
@@ -348,8 +336,8 @@ class Strategy:
                         take_profit_level = entry_price + self.take_profit_offset
                         trade = [self.index, entry_price, stop_level, trailing_stop, level, take_profit_level]
 
-                        trade_logger.info(f"{self.name}: [{self.index}] BUY ORDER SENT at {entry_price} (Retraced to static level {level})")
-                        trade_logger.info(f"{self.name}: Stop-Loss Level: {stop_level}")
+                        strategy_logger.info(f"{self.name}: [{self.index}] BUY ORDER SENT at {entry_price} (Retraced to static level {level})")
+                        strategy_logger.info(f"{self.name}: Stop-Loss Level: {stop_level}")
                         
                         order_success = False
                         if self.trader is not None:
@@ -365,59 +353,65 @@ class Strategy:
                             self.open_trade_count += 1
                             self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
                             max_open_trades -= 1
-                            strategy_logger.info(f"{self.name}: Order executed successfully. New open_trade_count={self.open_trade_count}")
+                            strategy_logger.info(f"{self.name}: ✓ Order executed successfully. Open trades: {self.open_trade_count}")
                         else:
-                            trade_logger.warning(f"{self.name}: Order FAILED. Trade not added to open trade list.")
+                            strategy_logger.warning(f"{self.name}: ✗ Order FAILED. Trade not added to list.")
 
         else:
-            strategy_logger.debug(f"{self.name}: Cannot trade - Open trades={self.open_trade_count}, Max allowed={self.max_open_trades}. No room left.")
-        
-        # Log summary at end of buy strategy execution
-        active_retraces = [(k, v) for k, v in self.retrace_levels.items() if v is not None]
-        if active_retraces:
-            strategy_logger.debug(f"{self.name} [BUY] Summary: Active retrace levels: {active_retraces[:5]}{'...' if len(active_retraces) > 5 else ''}")
+            if self.open_trade_count >= self.max_open_trades:
+                strategy_logger.info(f"{self.name}: No room to trade (Open: {self.open_trade_count}/{self.max_open_trades})")
         
     def run_sell_strategy(self):
         # need valid data
 
         max_open_trades = self.calculate_max_open_trades(self.price)
-        strategy_logger.debug(f"{self.name} [SELL]: Starting entry check | max_open_trades={max_open_trades}, open_trade_count={self.open_trade_count}, price={self.price}, last_price={self.last_price}, high={self.high_price}, low={self.low_price}")
         
         if max_open_trades > 0:  # can trade
-            strategy_logger.debug(f"{self.name} [SELL]: Room available to trade, checking {len(self.static_levels)} levels...")
+            level_crossed = False
             for level in self.static_levels:
                 entry_offset = self.entry_offset
                 level_idx = self.static_levels.index(level)
                 
                 # Track direction of level cross
                 if self.price >= level > self.low_price:  # Price crossed UP through level
-                    strategy_logger.debug(f"{self.name}: Price crossed UP through level {level} (level_idx={level_idx}) with price {self.price}, low={self.low_price}")
+                    level_crossed = True
+                    strategy_logger.info(f"{self.name}: Price crossed UP through level {level} (level_idx={level_idx})")
+                    strategy_logger.info(f"  Current price: {self.price}, Low: {self.low_price}, Level: {level}")
                     self.retrace_levels[level_idx] = 'up'
                 elif self.price <= level < self.high_price:  # Price crossed DOWN through level
-                    strategy_logger.debug(f"{self.name}: Price crossed DOWN through level {level} (level_idx={level_idx}) with price {self.price}, high={self.high_price}")
+                    level_crossed = True
+                    strategy_logger.info(f"{self.name}: Price crossed DOWN through level {level} (level_idx={level_idx})")
+                    strategy_logger.info(f"  Current price: {self.price}, High: {self.high_price}, Level: {level}")
                     self.retrace_levels[level_idx] = 'down'
                 
                 # For short strategy, enter when price crosses down after an up retrace
                 re_entry_idx = level_idx - self.re_entry_distance
                 
-                # Debug entry condition checks
+                # Check entry conditions
                 condition1 = self.price > level - entry_offset >= self.last_price
                 condition2 = re_entry_idx in self.retrace_levels
                 condition3 = self.retrace_levels.get(re_entry_idx) == 'up' if condition2 else False
                 
-                # Log entry condition evaluation for levels near current price
-                if abs(self.price - level) < 50:  # Only log for nearby levels to avoid spam
-                    strategy_logger.debug(f"{self.name}: Checking entry at level {level} (idx={level_idx}, re_entry_idx={re_entry_idx})")
-                    strategy_logger.debug(f"  Condition 1 (price cross up): {condition1} | price={self.price}, threshold={level - entry_offset}, last={self.last_price}")
-                    strategy_logger.debug(f"  Condition 2 (re_entry_idx exists): {condition2} | re_entry_idx={re_entry_idx}, valid_indices={list(self.retrace_levels.keys())[:10]}...")
-                    strategy_logger.debug(f"  Condition 3 (retrace is 'up'): {condition3} | retrace_value={self.retrace_levels.get(re_entry_idx)}")
-                    
-                    if condition1 and condition2 and not condition3:
-                        strategy_logger.debug(f"  -> Entry NOT triggered: Price crossed but retrace level {re_entry_idx} is '{self.retrace_levels.get(re_entry_idx)}' (need 'up')")
-                    elif condition1 and not condition2:
-                        strategy_logger.debug(f"  -> Entry NOT triggered: Price crossed but re_entry_idx {re_entry_idx} not in retrace_levels dict")
-                    elif not condition1:
-                        strategy_logger.debug(f"  -> Entry NOT triggered: Price condition not met (no cross detected)")
+                # Log detailed decision process when price crosses this level or nearby
+                if abs(self.price - level) < 50:  # Near this level
+                    if condition1 or level_crossed:  # Price action happening
+                        strategy_logger.info(f"{self.name}: Evaluating SHORT entry at level {level}")
+                        strategy_logger.info(f"  Step 1 - Price crossed up through entry zone?")
+                        strategy_logger.info(f"    Price: {self.price}, Entry threshold: {level - entry_offset}, Last price: {self.last_price}")
+                        strategy_logger.info(f"    Result: {'YES' if condition1 else 'NO'}")
+                        
+                        if condition1:
+                            strategy_logger.info(f"  Step 2 - Does re-entry level {re_entry_idx} exist?")
+                            strategy_logger.info(f"    Result: {'YES' if condition2 else 'NO'}")
+                            
+                            if condition2:
+                                strategy_logger.info(f"  Step 3 - Is re-entry level {re_entry_idx} marked as 'up' retrace?")
+                                strategy_logger.info(f"    Current value: '{self.retrace_levels.get(re_entry_idx)}'")
+                                strategy_logger.info(f"    Result: {'YES - ENTRY CONDITIONS MET!' if condition3 else 'NO - Need up retrace'}")
+                            else:
+                                strategy_logger.info(f"  Decision: Cannot enter - Re-entry index {re_entry_idx} not in retrace_levels")
+                        else:
+                            strategy_logger.info(f"  Decision: Cannot enter - Price hasn't crossed up through entry zone")
                 
                 if condition1 and condition2 and condition3:
                     strategy_logger.info(f"{self.name}: *** ENTRY TRIGGERED *** at level {level} (level_idx={level_idx}, re_entry_idx={re_entry_idx})")
@@ -433,8 +427,8 @@ class Strategy:
                         take_profit_level = entry_price - self.take_profit_offset
                         trade = [self.index, entry_price, stop_level, trailing_stop, level, take_profit_level]
 
-                        trade_logger.info(f"{self.name}: [{self.index}] SELL ORDER SENT at {entry_price} (Retraced up to static level {level})")
-                        trade_logger.info(f"{self.name}: Stop-Loss Level: {stop_level}")
+                        strategy_logger.info(f"{self.name}: [{self.index}] SELL ORDER SENT at {entry_price} (Retraced up to static level {level})")
+                        strategy_logger.info(f"{self.name}: Stop-Loss Level: {stop_level}")
                         
                         order_success = False
                         if self.trader is not None:
@@ -450,17 +444,13 @@ class Strategy:
                             self.open_trade_count += 1
                             self.current_cash_value -= entry_price * 0.1 * 4 * 12.5
                             max_open_trades -= 1
-                            strategy_logger.info(f"{self.name}: Order executed successfully. New open_trade_count={self.open_trade_count}")
+                            strategy_logger.info(f"{self.name}: ✓ Order executed successfully. Open trades: {self.open_trade_count}")
                         else:
-                            trade_logger.warning(f"{self.name}: Order FAILED. Trade not added to open trade list.")
+                            strategy_logger.warning(f"{self.name}: ✗ Order FAILED. Trade not added to list.")
 
         else:
-            strategy_logger.debug(f"{self.name}: Cannot trade - Open trades={self.open_trade_count}, Max allowed={self.max_open_trades}. No room left.")
-        
-        # Log summary at end of sell strategy execution
-        active_retraces = [(k, v) for k, v in self.retrace_levels.items() if v is not None]
-        if active_retraces:
-            strategy_logger.debug(f"{self.name} [SELL] Summary: Active retrace levels: {active_retraces[:5]}{'...' if len(active_retraces) > 5 else ''}")
+            if self.open_trade_count >= self.max_open_trades:
+                strategy_logger.info(f"{self.name}: No room to trade (Open: {self.open_trade_count}/{self.max_open_trades})")
 
     def check_trade_to_remove(self):
        if self.open_trade_count > 0:
@@ -491,7 +481,7 @@ class Strategy:
 
                         trigger_price = self.static_levels[index_of_level + self.trail_trigger]  # find the price 2 levels up
                         if self.price > trigger_price:
-                            strategy_logger.info(f"{self.name}: [{self.index}] Trailing stop activated for long position")
+                            strategy_logger.info(f"{self.name}: Trailing stop activated for LONG at {trigger_price}")
                             trailing_stop = trigger_price
                             self.open_trade_list[i][3] = trailing_stop  # update our trailing stop
 
@@ -518,8 +508,8 @@ class Strategy:
                             if netPosition > 0:
                                 self.trader.enter_position(quantity=1, is_long=False)
 
-                        trade_logger.info(f"[{self.index}] SELL ORDER EXECUTED at {self.price} (stop level hit {stop_level} or trailing stop hit at {trailing_stop}) - Profit/Loss: {pnl:.2f}")
-                        trade_logger.info(f"    Entry Price: {entry_price}, Exit Price: {self.price}, Duration: {self._calculate_duration(trade_time, self.index)}")
+                        reason = "Trailing stop" if trailing_stop and self.price <= trailing_stop else ("Stop loss" if self.price <= stop_level else "Take profit")
+                        strategy_logger.info(f"{self.name}: LONG EXIT - {reason} at {self.price} | PnL: ${pnl:.2f} | Entry: {entry_price} | Duration: {self._calculate_duration(trade_time, self.index)}")
 
                 else:
                     if trailing_stop is None:
@@ -529,7 +519,7 @@ class Strategy:
 
                         trigger_price = self.static_levels[index_of_level - self.trail_trigger]
                         if self.price <= trigger_price:
-                            strategy_logger.info(f"{self.name}: [{self.index}] Trailing stop activated for short position")
+                            strategy_logger.info(f"{self.name}: Trailing stop activated for SHORT at {trigger_price}")
                             trailing_stop = trigger_price
                             self.open_trade_list[i][3] = trailing_stop
 
@@ -555,8 +545,8 @@ class Strategy:
                             if netPosition < 0:
                                 self.trader.enter_position(quantity=1, is_long=True)
                         
-                        trade_logger.info(f"[{self.index}] COVER ORDER EXECUTED at {self.price} (stop level hit {stop_level} or trailing stop hit at {trailing_stop}) - Profit/Loss: {pnl:.2f}")
-                        trade_logger.info(f"    Entry Price: {entry_price}, Exit Price: {self.price}, Duration: {self._calculate_duration(trade_time, self.index)}")
+                        reason = "Trailing stop" if trailing_stop and self.price >= trailing_stop else ("Stop loss" if self.price >= stop_level else "Take profit")
+                        strategy_logger.info(f"{self.name}: SHORT EXIT - {reason} at {self.price} | PnL: ${pnl:.2f} | Entry: {entry_price} | Duration: {self._calculate_duration(trade_time, self.index)}")
 
             for trade in trades_to_remove:
                 del self.open_trade_list[self.open_trade_list.index(trade)]  # remove the open trade
