@@ -132,7 +132,7 @@ async def lifespan(app: FastAPI):
         stop_loss_offset=150,
         trail_trigger=10,
         re_entry_distance=1,
-        max_open_trades=4,
+        max_open_trades=10,
         max_contracts_per_trade=1,
         symbol_size=50,
         is_trading_long=True,
