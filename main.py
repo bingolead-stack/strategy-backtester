@@ -85,7 +85,7 @@ async def lifespan(app: FastAPI):
 
     token_manager = TokenManager()
     token_manager.start()
-    swing_trader = TradovateTrader(symbol="ESZ5", token_manager=token_manager)
+    swing_trader = TradovateTrader(symbol="ESH6", token_manager=token_manager)
     
     # Create strategies with persistence enabled
     swing_strategy_long = Strategy(
@@ -123,7 +123,7 @@ async def lifespan(app: FastAPI):
     swing_strategy_long.load_static_levels(STATIC_LEVELS)
     swing_strategy_short.load_static_levels(STATIC_LEVELS)
     
-    high_pnl_trader = TradovateTrader(symbol="MESZ5", token_manager=token_manager)
+    high_pnl_trader = TradovateTrader(symbol="MESH6", token_manager=token_manager)
     high_pnl_strategy = Strategy(
         name="High PNL Strategy",
         trader=high_pnl_trader,
