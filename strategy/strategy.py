@@ -287,24 +287,29 @@ class Strategy:
         # need valid data
 
         max_open_trades = self.calculate_max_open_trades(self.price)
+        level_crossed = False
         
+        # ALWAYS track level crosses regardless of whether we can trade
+        for level in self.static_levels:
+            level_idx = self.static_levels.index(level)
+            
+            # Track direction of level cross
+            if self.price <= level < self.high_price:  # Price crossed DOWN through level
+                level_crossed = True
+                strategy_logger.info(f"{self.name}: Price crossed DOWN through level {level} (level_idx={level_idx})")
+                strategy_logger.info(f"  Current price: {self.price}, High: {self.high_price}, Level: {level}")
+                self.retrace_levels[level_idx] = 'down'
+            elif self.price >= level > self.low_price:  # Price crossed UP through level
+                level_crossed = True
+                strategy_logger.info(f"{self.name}: Price crossed UP through level {level} (level_idx={level_idx})")
+                strategy_logger.info(f"  Current price: {self.price}, Low: {self.low_price}, Level: {level}")
+                self.retrace_levels[level_idx] = 'up'
+        
+        # Only check entry conditions if we have room to trade
         if max_open_trades > 0:  # can trade
-            level_crossed = False
             for level in self.static_levels:
                 entry_offset = self.entry_offset
                 level_idx = self.static_levels.index(level)
-                
-                # Track direction of level cross
-                if self.price <= level < self.high_price:  # Price crossed DOWN through level
-                    level_crossed = True
-                    strategy_logger.info(f"{self.name}: Price crossed DOWN through level {level} (level_idx={level_idx})")
-                    strategy_logger.info(f"  Current price: {self.price}, High: {self.high_price}, Level: {level}")
-                    self.retrace_levels[level_idx] = 'down'
-                elif self.price >= level > self.low_price:  # Price crossed UP through level
-                    level_crossed = True
-                    strategy_logger.info(f"{self.name}: Price crossed UP through level {level} (level_idx={level_idx})")
-                    strategy_logger.info(f"  Current price: {self.price}, Low: {self.low_price}, Level: {level}")
-                    self.retrace_levels[level_idx] = 'up'
 
                 # For long strategy, enter when price crosses up after a down retrace
                 re_entry_idx = level_idx + self.re_entry_distance
@@ -377,24 +382,29 @@ class Strategy:
         # need valid data
 
         max_open_trades = self.calculate_max_open_trades(self.price)
+        level_crossed = False
         
+        # ALWAYS track level crosses regardless of whether we can trade
+        for level in self.static_levels:
+            level_idx = self.static_levels.index(level)
+            
+            # Track direction of level cross
+            if self.price >= level > self.low_price:  # Price crossed UP through level
+                level_crossed = True
+                strategy_logger.info(f"{self.name}: Price crossed UP through level {level} (level_idx={level_idx})")
+                strategy_logger.info(f"  Current price: {self.price}, Low: {self.low_price}, Level: {level}")
+                self.retrace_levels[level_idx] = 'up'
+            elif self.price <= level < self.high_price:  # Price crossed DOWN through level
+                level_crossed = True
+                strategy_logger.info(f"{self.name}: Price crossed DOWN through level {level} (level_idx={level_idx})")
+                strategy_logger.info(f"  Current price: {self.price}, High: {self.high_price}, Level: {level}")
+                self.retrace_levels[level_idx] = 'down'
+        
+        # Only check entry conditions if we have room to trade
         if max_open_trades > 0:  # can trade
-            level_crossed = False
             for level in self.static_levels:
                 entry_offset = self.entry_offset
                 level_idx = self.static_levels.index(level)
-                
-                # Track direction of level cross
-                if self.price >= level > self.low_price:  # Price crossed UP through level
-                    level_crossed = True
-                    strategy_logger.info(f"{self.name}: Price crossed UP through level {level} (level_idx={level_idx})")
-                    strategy_logger.info(f"  Current price: {self.price}, Low: {self.low_price}, Level: {level}")
-                    self.retrace_levels[level_idx] = 'up'
-                elif self.price <= level < self.high_price:  # Price crossed DOWN through level
-                    level_crossed = True
-                    strategy_logger.info(f"{self.name}: Price crossed DOWN through level {level} (level_idx={level_idx})")
-                    strategy_logger.info(f"  Current price: {self.price}, High: {self.high_price}, Level: {level}")
-                    self.retrace_levels[level_idx] = 'down'
                 
                 # For short strategy, enter when price crosses down after an up retrace
                 re_entry_idx = level_idx - self.re_entry_distance
