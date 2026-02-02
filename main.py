@@ -69,7 +69,7 @@ scalp_strategy_short = None
 scalp_trader = None
 state_persistence = None
 
-high_pnl_strategy = None
+# high_pnl_strategy = None
 
 last_price = None
 
@@ -123,35 +123,13 @@ async def lifespan(app: FastAPI):
     swing_strategy_long.load_static_levels(STATIC_LEVELS)
     swing_strategy_short.load_static_levels(STATIC_LEVELS)
     
-    high_pnl_trader = TradovateTrader(symbol="MESH6", token_manager=token_manager)
-    high_pnl_strategy = Strategy(
-        name="High PNL Strategy",
-        trader=high_pnl_trader,
-        entry_offset=10,
-        take_profit_offset=2925,
-        stop_loss_offset=150,
-        trail_trigger=10,
-        re_entry_distance=1,
-        max_open_trades=10,
-        max_contracts_per_trade=1,
-        symbol_size=50,
-        is_trading_long=True,
-        persistence=state_persistence,
-        auto_save=True
-    )
-    high_pnl_strategy.load_static_levels(STATIC_LEVELS)
-    # Try to load saved state
-    swing_strategy_long.load_state()
-    swing_strategy_short.load_state()
-    high_pnl_strategy.load_state()
-
-    # scalp_trader = TradovateTrader(symbol="ESZ5", token_manager=token_manager)
-    # scalp_strategy_long = Strategy(
-    #     name="Scalp Long Strategy",
-    #     trader=scalp_trader,
-    #     entry_offset=5,
-    #     take_profit_offset=35,
-    #     stop_loss_offset=100,
+    # high_pnl_trader = TradovateTrader(symbol="MESH6", token_manager=token_manager)
+    # high_pnl_strategy = Strategy(
+    #     name="High PNL Strategy",
+    #     trader=high_pnl_trader,
+    #     entry_offset=10,
+    #     take_profit_offset=2925,
+    #     stop_loss_offset=150,
     #     trail_trigger=10,
     #     re_entry_distance=1,
     #     max_open_trades=10,
@@ -161,25 +139,47 @@ async def lifespan(app: FastAPI):
     #     persistence=state_persistence,
     #     auto_save=True
     # )
-    # scalp_strategy_short = Strategy(
-    #     name="Scalp Short Strategy",
-    #     trader=scalp_trader,
-    #     entry_offset=10,
-    #     take_profit_offset=20,
-    #     stop_loss_offset=150,
-    #     trail_trigger=10,
-    #     re_entry_distance=1,
-    #     max_open_trades=10,
-    #     max_contracts_per_trade=1,
-    #     symbol_size=50,
-    #     is_trading_long=False,
-    #     persistence=state_persistence,
-    #     auto_save=True
-    # )
+    # high_pnl_strategy.load_static_levels(STATIC_LEVELS)
+    # Try to load saved state
+    swing_strategy_long.load_state()
+    swing_strategy_short.load_state()
+    # high_pnl_strategy.load_state()
+
+    scalp_trader = TradovateTrader(symbol="MESH6", token_manager=token_manager)
+    scalp_strategy_long = Strategy(
+        name="Scalp Long Strategy",
+        trader=scalp_trader,
+        entry_offset=5,
+        take_profit_offset=35,
+        stop_loss_offset=100,
+        trail_trigger=10,
+        re_entry_distance=1,
+        max_open_trades=10,
+        max_contracts_per_trade=1,
+        symbol_size=50,
+        is_trading_long=True,
+        persistence=state_persistence,
+        auto_save=True
+    )
+    scalp_strategy_short = Strategy(
+        name="Scalp Short Strategy",
+        trader=scalp_trader,
+        entry_offset=10,
+        take_profit_offset=20,
+        stop_loss_offset=150,
+        trail_trigger=10,
+        re_entry_distance=1,
+        max_open_trades=10,
+        max_contracts_per_trade=1,
+        symbol_size=50,
+        is_trading_long=False,
+        persistence=state_persistence,
+        auto_save=True
+    )
     
     # Load static levels first
-    # scalp_strategy_long.load_static_levels(STATIC_LEVELS)
-    # scalp_strategy_short.load_static_levels(STATIC_LEVELS)
+    scalp_strategy_long.load_static_levels(STATIC_LEVELS)
+    scalp_strategy_short.load_static_levels(STATIC_LEVELS)
     
     # Try to load saved state
     # if scalp_strategy_long.load_state():
@@ -201,12 +201,16 @@ async def lifespan(app: FastAPI):
         if IS_TRADING_LONG:
             swing_strategy_long.save_state()
             swing_strategy_long.print_trade_stats()
+            scalp_strategy_long.save_state()
+            scalp_strategy_long.print_trade_stats()
         else:
             swing_strategy_short.save_state()
             swing_strategy_short.print_trade_stats()
+            scalp_strategy_short.save_state()
+            scalp_strategy_short.print_trade_stats()
 
-        high_pnl_strategy.save_state()
-        high_pnl_strategy.print_trade_stats()
+        # high_pnl_strategy.save_state()
+        # high_pnl_strategy.print_trade_stats()
         
         logger.info("="*80)
         logger.info("Shutdown complete")
@@ -225,8 +229,8 @@ class Signal(BaseModel):
 
 @app.post("/webhook")
 async def receive_signal(signal: Signal):
-    global last_price, swing_strategy_long, scalp_strategy_long, swing_strategy_short, scalp_strategy_short, high_pnl_strategy
-    if swing_strategy_long is None or swing_strategy_short is None or high_pnl_strategy is None:
+    global last_price, swing_strategy_long, scalp_strategy_long, swing_strategy_short, scalp_strategy_short
+    if swing_strategy_long is None or swing_strategy_short is None or scalp_strategy_long is None or scalp_strategy_short is None:
         logger.error("Strategy not initialized")
         raise HTTPException(status_code=500, detail="Strategy not initialized")
     
@@ -236,12 +240,12 @@ async def receive_signal(signal: Signal):
     
     if IS_TRADING_LONG:
         swing_strategy_long.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
-        # scalp_strategy_long.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
+        scalp_strategy_long.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
     else:
         swing_strategy_short.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
-        # scalp_strategy_short.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
+        scalp_strategy_short.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
 
-    high_pnl_strategy.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
+    # high_pnl_strategy.update(datetime.now(), signal.close, last_price, signal.high, signal.low)
 
     last_price = signal.close
     return {"status": "success"}
