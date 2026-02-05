@@ -629,15 +629,25 @@ class Strategy:
                         trailing_stop = max(trailing_stop, self.price - self.stop_loss_offset)  # use high
                         self.open_trade_list[i][3] = trailing_stop  # update trailing stop
 
-                    if self.price <= stop_level or (trailing_stop is not None and self.price <= trailing_stop) or (self.price >= take_profit_level):
-                        # trade_history.append((index, 'SELL', price))
+                    if self.low_price <= stop_level or (trailing_stop is not None and self.low_price <= trailing_stop) or (self.high_price >= take_profit_level):
+                        # Determine exit price based on which condition was hit
+                        # Use worst-case assumption: if both stop and TP could be hit, assume stop was hit first
+                        if trailing_stop is not None and self.low_price <= trailing_stop:
+                            exit_price = trailing_stop
+                            reason = "Trailing stop"
+                        elif self.low_price <= stop_level:
+                            exit_price = stop_level
+                            reason = "Stop loss"
+                        else:
+                            exit_price = take_profit_level
+                            reason = "Take profit"
 
-                        pnl = (self.price - entry_price) * self.symbol_size  # mult be size
+                        pnl = (exit_price - entry_price) * self.symbol_size
                         self.current_cash_value += pnl
                         # add tied up margin to the current cash
                         self.current_cash_value += entry_price * 0.1 * 4 * 12.5
                         self.total_pnl += pnl
-                        self.trade_history.append((self.index, 'EXIT', self.price, pnl))
+                        self.trade_history.append((self.index, 'EXIT', exit_price, pnl))
                         self.cumulative_pnl.append(self.total_pnl)
 
                         # clean up open trades
@@ -647,9 +657,7 @@ class Strategy:
                             netPosition = self.trader.get_net_position()
                             if netPosition > 0:
                                 self.trader.enter_position(quantity=1, is_long=False)
-
-                        reason = "Trailing stop" if trailing_stop and self.price <= trailing_stop else ("Stop loss" if self.price <= stop_level else "Take profit")
-                        strategy_logger.info(f"{self.name}: LONG EXIT - {reason} at {self.price} | PnL: ${pnl:.2f} | Entry: {entry_price} | Duration: {self._calculate_duration(trade_time, self.index)}")
+                        strategy_logger.info(f"{self.name}: LONG EXIT - {reason} at {exit_price} | PnL: ${pnl:.2f} | Entry: {entry_price} | Duration: {self._calculate_duration(trade_time, self.index)}")
                         strategy_logger.info(f"{self.name}: Open trade count decreased to {self.open_trade_count}")
 
                 else:
@@ -670,24 +678,34 @@ class Strategy:
                         trailing_stop = min(trailing_stop, self.price + self.stop_loss_offset)
                         self.open_trade_list[i][3] = trailing_stop
 
-                    if self.price >= stop_level or (trailing_stop is not None and self.price >= trailing_stop) or (self.price <= take_profit_level):
-                        pnl = (entry_price - self.price) * self.symbol_size
+                    if self.high_price >= stop_level or (trailing_stop is not None and self.high_price >= trailing_stop) or (self.low_price <= take_profit_level):
+                        # Determine exit price based on which condition was hit
+                        # Use worst-case assumption: if both stop and TP could be hit, assume stop was hit first
+                        if trailing_stop is not None and self.high_price >= trailing_stop:
+                            exit_price = trailing_stop
+                            reason = "Trailing stop"
+                        elif self.high_price >= stop_level:
+                            exit_price = stop_level
+                            reason = "Stop loss"
+                        else:
+                            exit_price = take_profit_level
+                            reason = "Take profit"
+
+                        pnl = (entry_price - exit_price) * self.symbol_size
                         self.current_cash_value += pnl
                         self.current_cash_value += entry_price * 0.1 * 4 * 12.5
                         self.total_pnl += pnl
-                        self.trade_history.append((self.index, 'EXIT', self.price, pnl))
+                        self.trade_history.append((self.index, 'EXIT', exit_price, pnl))
                         self.cumulative_pnl.append(self.total_pnl)
 
                         self.open_trade_count -= 1
                         trades_to_remove.append([trade_time, entry_price, stop_level, trailing_stop, traded_level, take_profit_level])
-                        
+
                         if self.trader is not None:
                             netPosition = self.trader.get_net_position()
                             if netPosition < 0:
                                 self.trader.enter_position(quantity=1, is_long=True)
-                        
-                        reason = "Trailing stop" if trailing_stop and self.price >= trailing_stop else ("Stop loss" if self.price >= stop_level else "Take profit")
-                        strategy_logger.info(f"{self.name}: SHORT EXIT - {reason} at {self.price} | PnL: ${pnl:.2f} | Entry: {entry_price} | Duration: {self._calculate_duration(trade_time, self.index)}")
+                        strategy_logger.info(f"{self.name}: SHORT EXIT - {reason} at {exit_price} | PnL: ${pnl:.2f} | Entry: {entry_price} | Duration: {self._calculate_duration(trade_time, self.index)}")
                         strategy_logger.info(f"{self.name}: Open trade count decreased to {self.open_trade_count}")
 
             for trade in trades_to_remove:
