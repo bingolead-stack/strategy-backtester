@@ -101,7 +101,9 @@ async def lifespan(app: FastAPI):
         symbol_size=50,
         is_trading_long=True,
         persistence=state_persistence,
-        auto_save=True
+        auto_save=True,
+        use_trading_hours=False,
+        early_close_calendar=None
     )
     swing_strategy_short = Strategy(
         name="Swing Short Strategy",
@@ -116,7 +118,9 @@ async def lifespan(app: FastAPI):
         symbol_size=5,
         is_trading_long=False,
         persistence=state_persistence,
-        auto_save=True
+        auto_save=True,
+        use_trading_hours=False,
+        early_close_calendar=None
     )
     
     # Load static levels first
